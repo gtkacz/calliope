@@ -22,16 +22,26 @@ class Workspace(Base):
     root_path: Mapped[str] = mapped_column(Text, nullable=False)
     include_globs: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     exclude_globs: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
-    documents: Mapped[list["Document"]] = relationship(back_populates="workspace")
+    documents: Mapped[list["Document"]] = relationship(
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+    )
 
 
 class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("document"))
-    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id"), nullable=False)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     path: Mapped[str] = mapped_column(Text, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     frontmatter_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -53,7 +63,10 @@ class Chunk(Base):
     __tablename__ = "chunks"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("chunk"))
-    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), nullable=False)
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     heading_path: Mapped[str] = mapped_column(Text, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
@@ -81,32 +94,75 @@ class ChatSession(Base):
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("session"))
     title: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    retrieval_traces: Mapped[list["RetrievalTrace"]] = relationship(
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
 
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("message"))
-    session_id: Mapped[str] = mapped_column(ForeignKey("chat_sessions.id"), nullable=False)
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     role: Mapped[str] = mapped_column(String, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+
+    session: Mapped[ChatSession] = relationship(back_populates="messages")
+    retrieval_traces: Mapped[list["RetrievalTrace"]] = relationship(
+        back_populates="message",
+        passive_deletes=True,
+    )
 
 
 class RetrievalTrace(Base):
     __tablename__ = "retrieval_traces"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("trace"))
-    session_id: Mapped[str | None] = mapped_column(ForeignKey("chat_sessions.id"))
-    message_id: Mapped[str | None] = mapped_column(ForeignKey("chat_messages.id"))
+    session_id: Mapped[str] = mapped_column(
+        ForeignKey("chat_sessions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    message_id: Mapped[str | None] = mapped_column(
+        ForeignKey("chat_messages.id", ondelete="SET NULL"),
+    )
     query: Mapped[str] = mapped_column(Text, nullable=False)
     policy: Mapped[str] = mapped_column(String, nullable=False)
     selected_sources_json: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
     scores_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    session: Mapped[ChatSession] = relationship(back_populates="retrieval_traces")
+    message: Mapped[ChatMessage | None] = relationship(back_populates="retrieval_traces")
 
 
 class ConnectionProfile(Base):
@@ -119,4 +175,8 @@ class ConnectionProfile(Base):
     model: Mapped[str] = mapped_column(Text, nullable=False)
     api_key_ref: Mapped[str | None] = mapped_column(Text)
     capabilities_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )

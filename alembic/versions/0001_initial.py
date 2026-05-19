@@ -21,7 +21,12 @@ def upgrade() -> None:
         sa.Column("root_path", sa.Text(), nullable=False),
         sa.Column("include_globs", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("exclude_globs", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )
@@ -29,8 +34,18 @@ def upgrade() -> None:
         "chat_sessions",
         sa.Column("id", sa.String(), nullable=False),
         sa.Column("title", sa.Text()),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -42,7 +57,12 @@ def upgrade() -> None:
         sa.Column("model", sa.Text(), nullable=False),
         sa.Column("api_key_ref", sa.Text()),
         sa.Column("capabilities_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )
@@ -57,7 +77,7 @@ def upgrade() -> None:
         sa.Column("modified_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("indexed_at", sa.DateTime(timezone=True)),
         sa.Column("deleted_at", sa.DateTime(timezone=True)),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"]),
+        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -72,9 +92,14 @@ def upgrade() -> None:
         sa.Column("session_id", sa.String(), nullable=False),
         sa.Column("role", sa.String(), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
         sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.ForeignKeyConstraint(["session_id"], ["chat_sessions.id"]),
+        sa.ForeignKeyConstraint(["session_id"], ["chat_sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -88,7 +113,7 @@ def upgrade() -> None:
         sa.Column("metadata_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("embedding", Vector(384)),
         sa.Column("search_vector", postgresql.TSVECTOR()),
-        sa.ForeignKeyConstraint(["document_id"], ["documents.id"]),
+        sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -115,15 +140,20 @@ def upgrade() -> None:
     op.create_table(
         "retrieval_traces",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("session_id", sa.String()),
+        sa.Column("session_id", sa.String(), nullable=False),
         sa.Column("message_id", sa.String()),
         sa.Column("query", sa.Text(), nullable=False),
         sa.Column("policy", sa.String(), nullable=False),
         sa.Column("selected_sources_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("scores_json", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
-        sa.ForeignKeyConstraint(["message_id"], ["chat_messages.id"]),
-        sa.ForeignKeyConstraint(["session_id"], ["chat_sessions.id"]),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.ForeignKeyConstraint(["message_id"], ["chat_messages.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["session_id"], ["chat_sessions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
 

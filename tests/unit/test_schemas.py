@@ -20,7 +20,11 @@ def test_source_reference_contains_citation_fields() -> None:
     )
 
     assert source.score == 0.87
+    assert source.document_id == "doc_1"
+    assert source.chunk_id == "chunk_1"
+    assert source.path == "characters/kaelen.md"
     assert "Exile" in source.heading
+    assert source.excerpt == "After the Second Winter War"
 
 
 def test_enums_cover_mvp_values() -> None:
@@ -29,3 +33,6 @@ def test_enums_cover_mvp_values() -> None:
     assert CanonPolicy.CREATIVE_BUT_CONSISTENT == "creative_but_consistent"
     assert ProfileKind.OPENAI_COMPATIBLE == "openai_compatible"
     assert ProfileCapability.CHAT == "chat"
+    assert ProfileCapability.EMBEDDINGS == "embeddings"
+    assert ProfileCapability.RERANK == "rerank"
+    assert ProfileCapability.STREAMING == "streaming"

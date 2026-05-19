@@ -16,6 +16,10 @@ class MarkdownChunk:
 
 
 def chunk_document(document: ParsedDocument, max_chars: int = 1800) -> list[MarkdownChunk]:
+    if max_chars <= 0:
+        msg = "max_chars must be greater than 0"
+        raise ValueError(msg)
+
     chunks: list[MarkdownChunk] = []
 
     for section in document.sections:

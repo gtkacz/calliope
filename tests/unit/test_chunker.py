@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from calliope.ingest.chunker import chunk_document
 from calliope.ingest.parser import MarkdownSection, ParsedDocument, parse_markdown_file
 
@@ -55,3 +57,22 @@ def test_chunk_document_keeps_small_split_chunks_within_max_chars() -> None:
 
     assert [chunk.text for chunk in chunks] == ["alpha", "beta", "gamma", "deltaz", "eta"]
     assert all(len(chunk.text) <= 6 for chunk in chunks)
+
+
+@pytest.mark.parametrize("max_chars", [0, -1])
+def test_chunk_document_rejects_non_positive_max_chars(max_chars: int) -> None:
+    parsed = ParsedDocument(
+        path="characters/invalid.md",
+        title="Invalid",
+        frontmatter={"type": "character"},
+        sections=[
+            MarkdownSection(
+                heading_path="Invalid",
+                level=1,
+                text="content",
+            )
+        ],
+    )
+
+    with pytest.raises(ValueError, match="max_chars must be greater than 0"):
+        chunk_document(parsed, max_chars=max_chars)

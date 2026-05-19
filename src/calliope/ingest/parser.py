@@ -9,6 +9,7 @@ import frontmatter
 
 _HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$")
 _FENCE_RE = re.compile(r"^[ ]{0,3}(`{3,}|~{3,})")
+_CLOSING_FENCE_RE = re.compile(r"^[ ]{0,3}(`{3,}|~{3,})[ \t]*$")
 
 
 @dataclass(frozen=True)
@@ -108,7 +109,7 @@ def _split_sections(markdown: str, title: str) -> list[MarkdownSection]:
 
 
 def _update_fence(line: str, fence: tuple[str, int] | None) -> tuple[str, int] | None:
-    match = _FENCE_RE.match(line)
+    match = _FENCE_RE.match(line) if fence is None else _CLOSING_FENCE_RE.match(line)
     if match is None:
         return fence
 

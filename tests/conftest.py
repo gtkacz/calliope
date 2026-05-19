@@ -16,7 +16,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 def assert_test_database_url(database_url: str) -> None:
     database_name = make_url(database_url).database or ""
-    if "test" not in database_name.lower():
+    normalized_database_name = database_name.lower()
+    if (
+        normalized_database_name != "calliope_test"
+        and not normalized_database_name.endswith("_test")
+    ):
         msg = (
             "Refusing destructive test database operation against "
             f"non-test database {database_name!r}"

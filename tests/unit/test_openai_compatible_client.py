@@ -1,6 +1,7 @@
 import httpx
 import pytest
 
+from calliope.domain.errors import AppError
 from calliope.llm.openai_compatible import OpenAICompatibleClient
 
 
@@ -42,3 +43,53 @@ async def test_chat_returns_message_content() -> None:
     answer = await client.chat([{"role": "user", "content": "Who is Kaelen?"}])
 
     assert answer == "Grounded answer"
+
+
+@pytest.mark.asyncio
+async def test_embed_maps_transport_failure_to_app_error() -> None:
+    def raise_transport_error(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("connection refused", request=request)
+
+    client = OpenAICompatibleClient(
+        base_url="http://local/v1",
+        model="embed-model",
+        api_key="test",
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(raise_transport_error)),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await client.embed("Kaelen")
+
+    error = exc_info.value
+    assert error.code == "embedding_failed"
+    assert error.status_code == 502
+    assert error.message == "OpenAI-compatible request failed."
+    assert error.details == {
+        "exception": "ConnectError",
+        "message": "connection refused",
+    }
+
+
+@pytest.mark.asyncio
+async def test_chat_maps_transport_failure_to_app_error() -> None:
+    def raise_transport_error(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = OpenAICompatibleClient(
+        base_url="http://local/v1",
+        model="chat-model",
+        api_key="test",
+        http_client=httpx.AsyncClient(transport=httpx.MockTransport(raise_transport_error)),
+    )
+
+    with pytest.raises(AppError) as exc_info:
+        await client.chat([{"role": "user", "content": "Who is Kaelen?"}])
+
+    error = exc_info.value
+    assert error.code == "generation_failed"
+    assert error.status_code == 502
+    assert error.message == "OpenAI-compatible request failed."
+    assert error.details == {
+        "exception": "ReadTimeout",
+        "message": "timed out",
+    }

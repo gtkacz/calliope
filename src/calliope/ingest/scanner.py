@@ -48,6 +48,20 @@ def _matches_any(relative_path: str, globs: Sequence[str]) -> bool:
 
 
 def _matches(relative_path: str, pattern: str) -> bool:
-    return fnmatchcase(relative_path, pattern) or (
-        pattern.startswith("**/") and fnmatchcase(relative_path, pattern.removeprefix("**/"))
+    return _match_segments(relative_path.split("/"), pattern.split("/"))
+
+
+def _match_segments(path_parts: list[str], pattern_parts: list[str]) -> bool:
+    if not pattern_parts:
+        return not path_parts
+
+    pattern_part = pattern_parts[0]
+    if pattern_part == "**":
+        return _match_segments(path_parts, pattern_parts[1:]) or (
+            bool(path_parts) and _match_segments(path_parts[1:], pattern_parts)
+        )
+
+    return bool(path_parts) and fnmatchcase(path_parts[0], pattern_part) and _match_segments(
+        path_parts[1:],
+        pattern_parts[1:],
     )

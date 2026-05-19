@@ -84,9 +84,17 @@ def _split_long_text(text: str, max_chars: int) -> list[str]:
         else:
             if current:
                 chunks.append(current)
-            current = word
+            if len(word) > max_chars:
+                chunks.extend(_split_by_chars(word, max_chars))
+                current = ""
+            else:
+                current = word
 
     if current:
         chunks.append(current)
 
     return chunks
+
+
+def _split_by_chars(text: str, max_chars: int) -> list[str]:
+    return [text[index : index + max_chars] for index in range(0, len(text), max_chars)]

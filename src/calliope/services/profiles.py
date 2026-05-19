@@ -17,16 +17,7 @@ class ProfileService:
         return self.repository.list()
 
     def get_by_name(self, name: str) -> ProfileRead:
-        profile = self.repository.get_by_name(name)
-        if profile is None:
-            raise AppError(
-                code="connection_profile_not_found",
-                message="Connection profile not found.",
-                status_code=404,
-                details={"name": name},
-            )
-
-        return profile
+        return self.repository.get_by_name(name)
 
     def require_capability(self, name: str, capability: ProfileCapability) -> ProfileRead:
         profile = self.get_by_name(name)
@@ -36,7 +27,7 @@ class ProfileService:
                 message="Model profile is missing required capability.",
                 details={
                     "name": name,
-                    "required_capability": capability.value,
+                    "capability": capability.value,
                     "capabilities": [
                         profile_capability.value for profile_capability in profile.capabilities
                     ],

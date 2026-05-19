@@ -11,6 +11,7 @@ from calliope.db.models import (
     RetrievalTrace,
     Workspace,
 )
+from calliope.domain.errors import AppError
 from calliope.domain.schemas import WorkspaceCreate
 from calliope.repositories.workspaces import WorkspaceRepository
 
@@ -164,3 +165,16 @@ def test_workspace_repository_creates_and_lists(db_session) -> None:
 
     assert created.id.startswith("workspace_")
     assert [workspace.name for workspace in listed] == ["World"]
+
+
+def test_workspace_repository_get_raises_for_missing_workspace(db_session) -> None:
+    repo = WorkspaceRepository(db_session)
+
+    try:
+        repo.get("workspace_missing")
+    except AppError as exc:
+        assert exc.code == "workspace_not_found"
+        assert exc.status_code == 404
+        assert exc.details == {"workspace_id": "workspace_missing"}
+    else:
+        raise AssertionError("expected AppError")

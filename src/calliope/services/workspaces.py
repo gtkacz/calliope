@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 
-from calliope.domain.errors import AppError
 from calliope.domain.schemas import WorkspaceCreate, WorkspaceRead
 from calliope.repositories.workspaces import WorkspaceRepository
 
@@ -16,13 +15,4 @@ class WorkspaceService:
         return self.repository.list()
 
     def get(self, workspace_id: str) -> WorkspaceRead:
-        workspace = self.repository.get(workspace_id)
-        if workspace is None:
-            raise AppError(
-                code="workspace_not_found",
-                message="Workspace not found.",
-                status_code=404,
-                details={"workspace_id": workspace_id},
-            )
-
-        return workspace
+        return self.repository.get(workspace_id)

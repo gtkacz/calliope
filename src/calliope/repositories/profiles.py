@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from calliope.db.models import ConnectionProfile
 from calliope.domain.enums import ProfileCapability, ProfileKind
+from calliope.domain.errors import AppError
 from calliope.domain.schemas import ProfileCreate, ProfileRead
 
 
@@ -32,12 +33,17 @@ class ProfileRepository:
 
         return [self._to_read(profile) for profile in profiles]
 
-    def get_by_name(self, name: str) -> ProfileRead | None:
+    def get_by_name(self, name: str) -> ProfileRead:
         profile = self.session.scalar(
             select(ConnectionProfile).where(ConnectionProfile.name == name)
         )
         if profile is None:
-            return None
+            raise AppError(
+                code="connection_profile_not_found",
+                message="Connection profile not found.",
+                status_code=404,
+                details={"name": name},
+            )
 
         return self._to_read(profile)
 

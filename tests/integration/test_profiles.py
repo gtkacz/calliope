@@ -1,6 +1,7 @@
 from calliope.domain.enums import ProfileCapability, ProfileKind
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import ProfileCreate
+from calliope.repositories.profiles import ProfileRepository
 from calliope.services.profiles import ProfileService
 
 
@@ -23,5 +24,20 @@ def test_profile_service_creates_lists_and_requires_capability(db_session) -> No
         service.require_capability("local-chat", ProfileCapability.EMBEDDINGS)
     except AppError as exc:
         assert exc.code == "model_profile_missing_capability"
+        assert exc.details["capability"] == ProfileCapability.EMBEDDINGS.value
+        assert "required_capability" not in exc.details
+    else:
+        raise AssertionError("expected AppError")
+
+
+def test_profile_repository_get_by_name_raises_for_missing_profile(db_session) -> None:
+    repo = ProfileRepository(db_session)
+
+    try:
+        repo.get_by_name("missing-profile")
+    except AppError as exc:
+        assert exc.code == "connection_profile_not_found"
+        assert exc.status_code == 404
+        assert exc.details == {"name": "missing-profile"}
     else:
         raise AssertionError("expected AppError")

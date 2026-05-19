@@ -13,6 +13,7 @@ from calliope.db.models import (
 )
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import WorkspaceCreate
+from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
 
 
@@ -195,3 +196,22 @@ def test_workspace_repository_duplicate_name_raises_and_rolls_back(db_session) -
         raise AssertionError("expected AppError")
 
     assert [workspace.name for workspace in repo.list()] == ["World"]
+
+
+def test_document_repository_upsert_returns_flushed_document_row(db_session) -> None:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(name="Document World", root_path="/tmp/document-world")
+    )
+
+    document = DocumentRepository(db_session).upsert(
+        workspace_id=workspace.id,
+        path="notes.md",
+        title="Notes",
+        frontmatter={},
+        content_hash="abc",
+        modified_at_ns=1_700_000_000_000_000_000,
+    )
+
+    assert isinstance(document, Document)
+    assert document.id.startswith("document_")
+    assert db_session.get(Document, document.id) is document

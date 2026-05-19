@@ -22,7 +22,7 @@ class DocumentRepository:
         frontmatter: dict[str, Any],
         content_hash: str,
         modified_at_ns: int,
-    ) -> DocumentRead:
+    ) -> Document:
         document = self.session.scalar(
             select(Document).where(
                 Document.workspace_id == workspace_id,
@@ -53,7 +53,7 @@ class DocumentRepository:
             document.deleted_at = None
 
         self.session.flush()
-        return self._to_read(document)
+        return document
 
     def list(self) -> list[DocumentRead]:
         documents = self.session.scalars(select(Document).order_by(Document.path)).all()

@@ -1,9 +1,10 @@
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision: str = "0001_initial"
 down_revision: str | None = None
@@ -90,7 +91,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["document_id"], ["documents.id"]),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index("ix_chunks_document_index", "chunks", ["document_id", "chunk_index"], unique=True)
+    op.create_index(
+        "ix_chunks_document_index",
+        "chunks",
+        ["document_id", "chunk_index"],
+        unique=True,
+    )
     op.create_index(
         "ix_chunks_search_vector",
         "chunks",

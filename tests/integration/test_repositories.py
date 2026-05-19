@@ -11,6 +11,8 @@ from calliope.db.models import (
     RetrievalTrace,
     Workspace,
 )
+from calliope.domain.schemas import WorkspaceCreate
+from calliope.repositories.workspaces import WorkspaceRepository
 
 
 def test_metadata_contains_mvp_tables() -> None:
@@ -152,3 +154,13 @@ def test_deleting_message_nulls_retrieval_trace_message_reference(db_session) ->
     db_session.refresh(trace)
 
     assert trace.message_id is None
+
+
+def test_workspace_repository_creates_and_lists(db_session) -> None:
+    repo = WorkspaceRepository(db_session)
+    created = repo.create(WorkspaceCreate(name="World", root_path="/tmp/world"))
+
+    listed = repo.list()
+
+    assert created.id.startswith("workspace_")
+    assert [workspace.name for workspace in listed] == ["World"]

@@ -9,9 +9,10 @@ class SearchService:
     def __init__(self, session: Session, embedding_client: EmbeddingClient) -> None:
         self.session = session
         self.embedding_client = embedding_client
+        self._retriever = HybridRetriever(self.session, self.embedding_client)
 
     def search(self, request: SearchRequest) -> SearchResponse:
-        hits = HybridRetriever(self.session, self.embedding_client).retrieve(
+        hits = self._retriever.retrieve(
             request.query,
             workspace_id=request.workspace_id,
             limit=request.limit,
@@ -20,3 +21,6 @@ class SearchService:
         sources = [chunk_repo.source_for_chunk(hit.chunk_id, hit.score) for hit in hits]
 
         return SearchResponse(sources=sources)
+
+    def close(self) -> None:
+        self._retriever.close()

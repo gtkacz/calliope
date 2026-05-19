@@ -24,8 +24,7 @@ def test_profile_service_creates_lists_and_requires_capability(db_session) -> No
         service.require_capability("local-chat", ProfileCapability.EMBEDDINGS)
     except AppError as exc:
         assert exc.code == "model_profile_missing_capability"
-        assert exc.details["capability"] == ProfileCapability.EMBEDDINGS.value
-        assert "required_capability" not in exc.details
+        assert exc.details == {"name": "local-chat", "capability": "embeddings"}
     else:
         raise AssertionError("expected AppError")
 

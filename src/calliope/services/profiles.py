@@ -28,9 +28,6 @@ class ProfileService:
                 details={
                     "name": name,
                     "capability": capability.value,
-                    "capabilities": [
-                        profile_capability.value for profile_capability in profile.capabilities
-                    ],
                 },
             )
 

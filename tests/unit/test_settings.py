@@ -1,3 +1,4 @@
+import os
 from typing import Any
 
 import pytest
@@ -15,4 +16,13 @@ def test_settings_defaults_are_local(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert settings.database_url.startswith("postgresql+psycopg://")
     assert settings.api_title == "Calliope"
+    assert settings.embedding_dimensions == 384
+
+
+def test_calliope_env_is_cleared_before_settings_load() -> None:
+    assert "CALLIOPE_EMBEDDING_DIMENSIONS" not in os.environ
+
+    settings_kwargs: dict[str, Any] = {"_env_file": None}
+    settings = Settings(**settings_kwargs)
+
     assert settings.embedding_dimensions == 384

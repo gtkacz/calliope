@@ -15,7 +15,7 @@ class MarkdownChunk:
     metadata: dict[str, Any]
 
 
-def chunk_document(document: ParsedDocument, max_chars: int) -> list[MarkdownChunk]:
+def chunk_document(document: ParsedDocument, max_chars: int = 1800) -> list[MarkdownChunk]:
     chunks: list[MarkdownChunk] = []
 
     for section in document.sections:

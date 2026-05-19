@@ -9,4 +9,5 @@ def test_scan_workspace_finds_markdown_files() -> None:
     files = scan_workspace(root, include_globs=["**/*.md"], exclude_globs=["drafts/**"])
 
     assert [file.relative_path for file in files] == ["characters/kaelen.md"]
+    assert files[0].absolute_path.name == "kaelen.md"
     assert files[0].content_hash

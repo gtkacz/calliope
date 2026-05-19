@@ -9,7 +9,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class ScannedFile:
-    path: Path
+    absolute_path: Path
     relative_path: str
     content_hash: str
     modified_at_ns: int
@@ -33,7 +33,7 @@ def scan_workspace(
         content = path.read_bytes()
         files.append(
             ScannedFile(
-                path=path,
+                absolute_path=path,
                 relative_path=relative_path,
                 content_hash=sha256(content).hexdigest(),
                 modified_at_ns=path.stat().st_mtime_ns,

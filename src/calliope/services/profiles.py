@@ -24,7 +24,8 @@ class ProfileService:
         if capability not in profile.capabilities:
             raise AppError(
                 code="model_profile_missing_capability",
-                message="Model profile is missing required capability.",
+                message="Connection profile does not support the requested capability.",
+                status_code=400,
                 details={
                     "name": name,
                     "capability": capability.value,

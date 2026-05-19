@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from calliope.db.models import Workspace
@@ -18,7 +19,16 @@ class WorkspaceRepository:
             exclude_globs=payload.exclude_globs,
         )
         self.session.add(workspace)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise AppError(
+                code="workspace_already_exists",
+                message="Workspace already exists.",
+                status_code=409,
+                details={"name": payload.name},
+            ) from exc
         self.session.refresh(workspace)
 
         return self._to_read(workspace)

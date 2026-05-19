@@ -178,3 +178,20 @@ def test_workspace_repository_get_raises_for_missing_workspace(db_session) -> No
         assert exc.details == {"workspace_id": "workspace_missing"}
     else:
         raise AssertionError("expected AppError")
+
+
+def test_workspace_repository_duplicate_name_raises_and_rolls_back(db_session) -> None:
+    repo = WorkspaceRepository(db_session)
+    repo.create(WorkspaceCreate(name="World", root_path="/tmp/world"))
+
+    try:
+        repo.create(WorkspaceCreate(name="World", root_path="/tmp/other-world"))
+    except AppError as exc:
+        assert exc.code == "workspace_already_exists"
+        assert exc.message == "Workspace already exists."
+        assert exc.status_code == 409
+        assert exc.details == {"name": "World"}
+    else:
+        raise AssertionError("expected AppError")
+
+    assert [workspace.name for workspace in repo.list()] == ["World"]

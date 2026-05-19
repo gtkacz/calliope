@@ -42,3 +42,27 @@ def test_profile_repository_get_by_name_raises_for_missing_profile(db_session) -
         assert exc.details == {"name": "missing-profile"}
     else:
         raise AssertionError("expected AppError")
+
+
+def test_profile_repository_duplicate_name_raises_and_rolls_back(db_session) -> None:
+    repo = ProfileRepository(db_session)
+    payload = ProfileCreate(
+        name="local-chat",
+        kind=ProfileKind.OPENAI_COMPATIBLE,
+        base_url="http://localhost:4000/v1",
+        model="local-model",
+        capabilities=[ProfileCapability.CHAT],
+    )
+    repo.create(payload)
+
+    try:
+        repo.create(payload)
+    except AppError as exc:
+        assert exc.code == "connection_profile_already_exists"
+        assert exc.message == "Connection profile already exists."
+        assert exc.status_code == 409
+        assert exc.details == {"name": "local-chat"}
+    else:
+        raise AssertionError("expected AppError")
+
+    assert [profile.name for profile in repo.list()] == ["local-chat"]

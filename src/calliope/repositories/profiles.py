@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from calliope.db.models import ConnectionProfile
@@ -21,7 +22,16 @@ class ProfileRepository:
             capabilities_json=[capability.value for capability in payload.capabilities],
         )
         self.session.add(profile)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            raise AppError(
+                code="connection_profile_already_exists",
+                message="Connection profile already exists.",
+                status_code=409,
+                details={"name": payload.name},
+            ) from exc
         self.session.refresh(profile)
 
         return self._to_read(profile)

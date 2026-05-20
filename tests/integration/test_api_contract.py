@@ -1,5 +1,6 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
+import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
@@ -7,7 +8,9 @@ from sqlalchemy.orm import Session
 
 from calliope.api.app import create_app
 from calliope.api.dependencies import get_db_session
+from calliope.api.routes import chat as chat_route
 from calliope.config import Settings
+from calliope.domain.schemas import ChatRequest
 
 SETTINGS_WITHOUT_ENV_FILE: dict[str, Any] = {"_env_file": None}
 
@@ -88,3 +91,33 @@ def test_openapi_contains_mvp_routes() -> None:
     assert "/v1/documents" in paths
     assert "/v1/sources/{chunk_id}" in paths
     assert "/v1/sessions/{session_id}" in paths
+
+
+def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    class FakeEmbeddingClient:
+        def __init__(self) -> None:
+            self.closed = False
+
+        async def embed(self, text: str) -> list[float]:
+            return [0.0]
+
+        async def aclose(self) -> None:
+            self.closed = True
+
+    embedding_client = FakeEmbeddingClient()
+
+    def fake_get_embedding_client(session: object) -> FakeEmbeddingClient:
+        return embedding_client
+
+    def fake_get_chat_client(session: object) -> object:
+        raise RuntimeError("chat client setup failed")
+
+    monkeypatch.setattr(chat_route, "get_embedding_client", fake_get_embedding_client)
+    monkeypatch.setattr(chat_route, "get_chat_client", fake_get_chat_client)
+
+    with pytest.raises(RuntimeError, match="chat client setup failed"):
+        chat_route.chat(ChatRequest(message="Who is Kaelen?"), session=cast(Session, object()))
+
+    assert embedding_client.closed

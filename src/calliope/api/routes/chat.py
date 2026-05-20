@@ -10,6 +10,7 @@ from calliope.api.dependencies import (
 )
 from calliope.domain.schemas import ChatRequest, ChatResponse
 from calliope.ingest.indexer import EmbeddingClient
+from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
 from calliope.services.chat import ChatClient, ChatService
 
 router = APIRouter()
@@ -21,7 +22,18 @@ def chat(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> ChatResponse:
     embedding_client: EmbeddingClient = get_embedding_client(session)
-    chat_client: ChatClient = get_chat_client(session)
+    try:
+        chat_client: ChatClient = get_chat_client(session)
+    except Exception:
+        runner = _AsyncRunner()
+        try:
+            runner.run(aclose_client(embedding_client))
+        except Exception:
+            pass
+        finally:
+            runner.close()
+        raise
+
     service = ChatService(
         session,
         embedding_client=embedding_client,

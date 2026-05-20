@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from calliope.domain.schemas import ChatRequest, ChatResponse, SearchRequest
 from calliope.prompts.builder import build_chat_messages
 from calliope.repositories.chats import ChatRepository
-from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner
+from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner, aclose_client
 from calliope.services.search import SearchService
 
 
@@ -22,11 +22,15 @@ class ChatService:
         *,
         embedding_client: EmbeddingClient,
         chat_client: ChatClient,
+        close_embedding_client: bool = False,
+        close_chat_client: bool = False,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
         self.chat_client = chat_client
         self._async_runner = _AsyncRunner()
+        self._close_embedding_client = close_embedding_client
+        self._close_chat_client = close_chat_client
 
     def chat(self, request: ChatRequest) -> ChatResponse:
         repository = ChatRepository(self.session)
@@ -97,4 +101,12 @@ class ChatService:
         )
 
     def close(self) -> None:
-        self._async_runner.close()
+        try:
+            closed_client_ids: set[int] = set()
+            if self._close_embedding_client:
+                closed_client_ids.add(id(self.embedding_client))
+                self._async_runner.run(aclose_client(self.embedding_client))
+            if self._close_chat_client and id(self.chat_client) not in closed_client_ids:
+                self._async_runner.run(aclose_client(self.chat_client))
+        finally:
+            self._async_runner.close()

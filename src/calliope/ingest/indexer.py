@@ -13,6 +13,7 @@ from calliope.ingest.scanner import scan_workspace
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
+from calliope.retrieval.hybrid import aclose_client
 
 
 class EmbeddingClient(Protocol):
@@ -26,9 +27,16 @@ class ReindexResult:
 
 
 class Reindexer:
-    def __init__(self, session: Session, *, embedding_client: EmbeddingClient) -> None:
+    def __init__(
+        self,
+        session: Session,
+        *,
+        embedding_client: EmbeddingClient,
+        close_embedding_client: bool = False,
+    ) -> None:
         self.session = session
         self.embedding_client = embedding_client
+        self._close_embedding_client = close_embedding_client
 
     def reindex_workspace(self, workspace_id: str) -> ReindexResult:
         try:
@@ -54,7 +62,9 @@ class Reindexer:
             document_texts = [
                 [chunk.text for chunk in chunks] for _, _, chunks in indexed_documents
             ]
-            embeddings_by_document = asyncio.run(self._embed_documents(document_texts))
+            embeddings_by_document = asyncio.run(
+                self._embed_documents_and_maybe_close(document_texts)
+            )
 
             for (scanned, parsed, chunks), embeddings in zip(
                 indexed_documents,
@@ -86,3 +96,13 @@ class Reindexer:
             [await self.embedding_client.embed(text) for text in chunk_texts]
             for chunk_texts in document_texts
         ]
+
+    async def _embed_documents_and_maybe_close(
+        self,
+        document_texts: list[list[str]],
+    ) -> list[list[list[float]]]:
+        try:
+            return await self._embed_documents(document_texts)
+        finally:
+            if self._close_embedding_client:
+                await aclose_client(self.embedding_client)

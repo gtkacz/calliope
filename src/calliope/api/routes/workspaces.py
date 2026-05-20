@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from calliope.api.dependencies import close_model_client, get_db_session, get_embedding_client
+from calliope.api.dependencies import get_db_session, get_embedding_client
 from calliope.domain.schemas import (
     ReindexRequest,
     ReindexResponse,
@@ -35,15 +35,14 @@ def list_workspaces(
 def reindex_workspace(
     payload: ReindexRequest,
     session: Annotated[Session, Depends(get_db_session)],
-    embedding_client: Annotated[EmbeddingClient, Depends(get_embedding_client)],
 ) -> ReindexResponse:
-    try:
-        result = Reindexer(session, embedding_client=embedding_client).reindex_workspace(
-            payload.workspace_id
-        )
-        return ReindexResponse(
-            documents_indexed=result.documents_indexed,
-            chunks_indexed=result.chunks_indexed,
-        )
-    finally:
-        close_model_client(embedding_client)
+    embedding_client: EmbeddingClient = get_embedding_client(session)
+    result = Reindexer(
+        session,
+        embedding_client=embedding_client,
+        close_embedding_client=True,
+    ).reindex_workspace(payload.workspace_id)
+    return ReindexResponse(
+        documents_indexed=result.documents_indexed,
+        chunks_indexed=result.chunks_indexed,
+    )

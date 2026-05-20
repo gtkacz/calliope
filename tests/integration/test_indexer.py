@@ -22,6 +22,7 @@ class FakeEmbeddingClient:
 class SingleLoopEmbeddingClient:
     def __init__(self) -> None:
         self.loop_id: int | None = None
+        self.close_loop_id: int | None = None
 
     async def embed(self, text: str) -> list[float]:
         current_loop_id = id(asyncio.get_running_loop())
@@ -31,6 +32,9 @@ class SingleLoopEmbeddingClient:
             raise RuntimeError("embedding client crossed event loops")
 
         return [float(len(text) % 7)] * 384
+
+    async def aclose(self) -> None:
+        self.close_loop_id = id(asyncio.get_running_loop())
 
 
 def test_reindex_workspace_persists_documents_and_chunks(db_session: Session) -> None:
@@ -66,6 +70,27 @@ def test_reindex_workspace_reuses_one_event_loop_for_chunk_embeddings(
 
     assert result.documents_indexed == 1
     assert result.chunks_indexed >= 3
+
+
+def test_reindex_workspace_closes_owned_embedding_client_on_embedding_loop(
+    db_session: Session,
+) -> None:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="close-loop-world",
+            root_path=str(Path("tests/fixtures/world").resolve()),
+        )
+    )
+    embedding_client = SingleLoopEmbeddingClient()
+
+    result = Reindexer(
+        db_session,
+        embedding_client=embedding_client,
+        close_embedding_client=True,
+    ).reindex_workspace(workspace.id)
+
+    assert result.documents_indexed == 1
+    assert embedding_client.close_loop_id == embedding_client.loop_id
 
 
 def test_reindex_workspace_rolls_back_flushes_when_reindex_fails(

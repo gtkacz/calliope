@@ -43,6 +43,7 @@ def test_search_returns_sources_for_indexed_workspace(db_session: Session) -> No
 class LoopRecordingEmbeddingClient:
     def __init__(self) -> None:
         self.loops: list[asyncio.AbstractEventLoop] = []
+        self.close_loop: asyncio.AbstractEventLoop | None = None
 
     async def embed(self, text: str) -> list[float]:
         loop = asyncio.get_running_loop()
@@ -50,6 +51,9 @@ class LoopRecordingEmbeddingClient:
             raise AssertionError("SearchService used more than one event loop for embeddings")
         self.loops.append(loop)
         return [0.1] * 384
+
+    async def aclose(self) -> None:
+        self.close_loop = asyncio.get_running_loop()
 
 
 def test_search_reuses_embedding_event_loop_for_repeated_sync_calls(
@@ -103,3 +107,56 @@ def test_search_reuses_embedding_event_loop_for_repeated_sync_calls(
 
     assert len(embedding_client.loops) == 2
     assert len({id(loop) for loop in embedding_client.loops}) == 1
+
+
+def test_search_service_closes_owned_embedding_client_on_embedding_loop(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(
+        self: HybridRetriever,
+        embedding: list[float],
+        *,
+        workspace_id: str | None,
+        limit: int,
+    ) -> list[str]:
+        return ["chunk_a"]
+
+    def fake_lexical_search(
+        self: HybridRetriever,
+        query: str,
+        *,
+        workspace_id: str | None,
+        limit: int,
+    ) -> list[str]:
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(
+        self: ChunkRepository,
+        chunk_id: str,
+        score: float = 1.0,
+    ) -> SourceReference:
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    embedding_client = LoopRecordingEmbeddingClient()
+    service = SearchService(
+        db_session,
+        embedding_client,
+        close_embedding_client=True,
+    )
+
+    service.search(SearchRequest(query="Kaelen exile", limit=1))
+    service.close()
+
+    assert embedding_client.close_loop is embedding_client.loops[0]

@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from calliope.api.dependencies import (
-    close_model_client,
     get_chat_client,
     get_db_session,
     get_embedding_client,
@@ -20,18 +19,17 @@ router = APIRouter()
 def chat(
     request: ChatRequest,
     session: Annotated[Session, Depends(get_db_session)],
-    embedding_client: Annotated[EmbeddingClient, Depends(get_embedding_client)],
-    chat_client: Annotated[ChatClient, Depends(get_chat_client)],
 ) -> ChatResponse:
+    embedding_client: EmbeddingClient = get_embedding_client(session)
+    chat_client: ChatClient = get_chat_client(session)
     service = ChatService(
         session,
         embedding_client=embedding_client,
         chat_client=chat_client,
+        close_embedding_client=True,
+        close_chat_client=True,
     )
     try:
         return service.chat(request)
     finally:
         service.close()
-        close_model_client(embedding_client)
-        if chat_client is not embedding_client:
-            close_model_client(chat_client)

@@ -23,6 +23,14 @@ class OpenAICompatibleClient:
         self.http_client = http_client or httpx.AsyncClient(timeout=30)
         self._closed = False
 
+    async def aclose(self) -> None:
+        if self._closed:
+            return
+
+        self._closed = True
+        if self._owns_http_client:
+            await self.http_client.aclose()
+
     async def embed(self, text: str) -> list[float]:
         response = await self._post(
             f"{self.base_url}/embeddings",
@@ -54,9 +62,7 @@ class OpenAICompatibleClient:
         if self._closed:
             return
 
-        self._closed = True
-        if self._owns_http_client:
-            self._run_sync(self.http_client.aclose())
+        self._run_sync(self.aclose())
 
     async def _post(
         self,

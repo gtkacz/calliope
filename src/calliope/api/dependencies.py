@@ -20,12 +20,6 @@ def get_db_session(request: Request) -> Iterator[Session]:
         yield session
 
 
-def close_model_client(client: object) -> None:
-    close = getattr(client, "close", None)
-    if callable(close):
-        close()
-
-
 def api_key_for(profile: ProfileRead) -> str | None:
     if profile.api_key_ref is None:
         return None

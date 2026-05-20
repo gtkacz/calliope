@@ -96,19 +96,19 @@ async def test_chat_maps_transport_failure_to_app_error() -> None:
 
 
 @pytest.mark.asyncio
-async def test_close_closes_owned_http_client_inside_running_event_loop() -> None:
+async def test_aclose_closes_owned_http_client() -> None:
     client = OpenAICompatibleClient(
         base_url="http://local/v1",
         model="embed-model",
     )
 
-    client.close()
+    await client.aclose()
 
     assert client.http_client.is_closed
 
 
 @pytest.mark.asyncio
-async def test_close_does_not_close_injected_http_client() -> None:
+async def test_aclose_does_not_close_injected_http_client() -> None:
     http_client = httpx.AsyncClient(
         transport=httpx.MockTransport(lambda request: httpx.Response(200))
     )
@@ -118,7 +118,7 @@ async def test_close_does_not_close_injected_http_client() -> None:
         http_client=http_client,
     )
 
-    client.close()
+    await client.aclose()
 
     assert not http_client.is_closed
     await http_client.aclose()

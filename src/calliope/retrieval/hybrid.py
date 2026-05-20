@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import threading
-from collections.abc import Coroutine, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, cast
 
 from sqlalchemy import bindparam, func, select
 from sqlalchemy.orm import Session
@@ -14,6 +14,12 @@ from calliope.db.models import Chunk, Document
 
 class EmbeddingClient(Protocol):
     async def embed(self, text: str) -> list[float]: ...
+
+
+async def aclose_client(client: object) -> None:
+    close = getattr(client, "aclose", None)
+    if callable(close):
+        await cast(Callable[[], Awaitable[None]], close)()
 
 
 T = TypeVar("T")
@@ -100,11 +106,13 @@ class HybridRetriever:
         embedding_client: EmbeddingClient,
         *,
         async_runner: _AsyncRunner | None = None,
+        close_embedding_client: bool = False,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
         self._async_runner = async_runner or _AsyncRunner()
         self._owns_async_runner = async_runner is None
+        self._close_embedding_client = close_embedding_client
 
     def retrieve(
         self,
@@ -121,8 +129,12 @@ class HybridRetriever:
         return fuse_ranked_results(vector_ids, lexical_ids)[:limit]
 
     def close(self) -> None:
-        if self._owns_async_runner:
-            self._async_runner.close()
+        try:
+            if self._close_embedding_client:
+                self._async_runner.run(aclose_client(self.embedding_client))
+        finally:
+            if self._owns_async_runner:
+                self._async_runner.close()
 
     def _vector_search(
         self,

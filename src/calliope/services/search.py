@@ -12,6 +12,7 @@ class SearchService:
         embedding_client: EmbeddingClient,
         *,
         async_runner: _AsyncRunner | None = None,
+        close_embedding_client: bool = False,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
@@ -19,6 +20,7 @@ class SearchService:
             self.session,
             self.embedding_client,
             async_runner=async_runner,
+            close_embedding_client=close_embedding_client,
         )
 
     def search(self, request: SearchRequest) -> SearchResponse:

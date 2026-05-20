@@ -1,16 +1,17 @@
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
-
 from calliope.domain.enums import CanonPolicy
 from calliope.domain.schemas import ChatRequest, SourceReference, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.workspaces import WorkspaceRepository
 from calliope.retrieval.hybrid import HybridRetriever
 from calliope.services.chat import ChatService
+from sqlalchemy.orm import Session
 
 
 class FakeEmbeddingClient:
@@ -53,6 +54,109 @@ def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> 
     assert "Velmora" in response.answer
     assert response.sources
     assert response.trace_id.startswith("trace_")
+    assert response.session.id.startswith("session_")
+    assert response.answer
+    assert response.user_message.role == "user"
+    assert response.assistant_message.role == "assistant"
+
+
+def test_chat_service_persists_frontend_messages_and_returns_session_payload(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    service = ChatService(
+        db_session,
+        embedding_client=FakeEmbeddingClient(),
+        chat_client=FakeChatClient(),
+    )
+    try:
+        response = service.chat(
+            ChatRequest(
+                message="Where was Kaelen exiled from?",
+                chat_profile_id="profile_chat",
+                limit=1,
+            )
+        )
+    finally:
+        service.close()
+
+    assert response.session.id.startswith("session_")
+    assert response.user_message.metadata == {"turn_kind": "chat_user"}
+    assert response.assistant_message.metadata["turn_kind"] == "assistant"
+    assert response.assistant_message.metadata["chat_profile_id"] == "profile_chat"
+    assert response.assistant_message.metadata["source_count"] == 1
+    assert response.sources[0].path == "characters/kaelen.md"
+
+
+def test_chat_service_updates_existing_session_summary_after_new_turn(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    repository = ChatRepository(db_session)
+    chat_session = repository.create_session(title="Existing")
+    chat_session.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
+    db_session.commit()
+    original_updated_at = chat_session.updated_at
+
+    service = ChatService(
+        db_session,
+        embedding_client=FakeEmbeddingClient(),
+        chat_client=FakeChatClient(),
+    )
+    try:
+        response = service.chat(
+            ChatRequest(
+                message="Where was Kaelen exiled from?",
+                session_id=chat_session.id,
+                limit=1,
+            )
+        )
+    finally:
+        service.close()
+
+    refreshed_summary = repository.get_session_summary(chat_session.id)
+    assert response.session == refreshed_summary
+    assert response.session.updated_at > original_updated_at
 
 
 class LoopRecordingChatClient:

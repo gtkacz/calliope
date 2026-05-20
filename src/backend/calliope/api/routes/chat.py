@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from calliope.api.dependencies import (
-    get_chat_client,
+    get_chat_client_for_profile,
     get_db_session,
     get_embedding_client,
 )
@@ -22,7 +22,10 @@ def chat(
 ) -> ChatResponse:
     embedding_client: EmbeddingClient = get_embedding_client(session)
     try:
-        chat_client: ChatClient = get_chat_client(session)
+        chat_client: ChatClient = get_chat_client_for_profile(
+            session,
+            request.chat_profile_id,
+        )
     except Exception:
         runner = _AsyncRunner()
         try:

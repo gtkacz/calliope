@@ -52,3 +52,20 @@ def get_chat_client(
         model=profile.model,
         api_key=api_key_for(profile),
     )
+
+
+def get_chat_client_for_profile(
+    session: Session,
+    profile_id: str | None,
+) -> OpenAICompatibleClient:
+    if profile_id is None:
+        return get_chat_client(session)
+    profile = ProfileService(session).require_capability_by_id(
+        profile_id,
+        ProfileCapability.CHAT,
+    )
+    return OpenAICompatibleClient(
+        base_url=profile.base_url,
+        model=profile.model,
+        api_key=api_key_for(profile),
+    )

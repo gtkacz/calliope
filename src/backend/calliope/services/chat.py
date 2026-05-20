@@ -76,31 +76,40 @@ class ChatService:
                 session_id=session_id,
                 role="user",
                 content=request.message,
-                metadata={},
+                metadata={"turn_kind": "chat_user"},
             )
-            repository.add_message(
+            assistant_message = repository.add_message(
                 session_id=session_id,
                 role="assistant",
                 content=answer,
                 metadata={
+                    "turn_kind": "assistant",
                     "policy": request.policy.value,
+                    "chat_profile_id": request.chat_profile_id,
                     "source_count": len(search_response.sources),
+                    "sources": [
+                        source.model_dump(mode="json") for source in search_response.sources
+                    ],
                 },
             )
             trace = repository.add_trace(
                 session_id=session_id,
-                message_id=user_message.id,
+                message_id=assistant_message.id,
                 query=request.message,
                 policy=request.policy,
                 sources=search_response.sources,
                 scores={source.chunk_id: source.score for source in search_response.sources},
             )
+            repository.touch_session(session_id)
             self.session.commit()
         except Exception:
             self.session.rollback()
             raise
 
         return ChatResponse(
+            session=repository.get_session_summary(session_id),
+            user_message=repository.message_to_read(user_message),
+            assistant_message=repository.message_to_read(assistant_message),
             answer=answer,
             sources=search_response.sources,
             trace_id=trace.id,

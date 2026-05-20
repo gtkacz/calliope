@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from calliope.db.models import ChatMessage, ChatSession, ConversationFolder, RetrievalTrace
@@ -68,6 +69,17 @@ class ChatRepository:
 
     def get_session(self, session_id: str) -> SessionRead:
         return self._to_read(self.get_session_row(session_id))
+
+    def get_session_summary(self, session_id: str) -> SessionSummary:
+        return self._session_to_summary(self.get_session_row(session_id))
+
+    def touch_session(self, session_id: str) -> None:
+        chat_session = self.get_session_row(session_id)
+        chat_session.updated_at = datetime.now(UTC)
+        self.session.flush()
+
+    def message_to_read(self, message: ChatMessage) -> MessageRead:
+        return self._message_to_read(message)
 
     def list_sessions(self, folder_id: str | None = None) -> list[SessionSummary]:
         statement = select(ChatSession).order_by(ChatSession.updated_at.desc(), ChatSession.id)

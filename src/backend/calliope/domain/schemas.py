@@ -66,13 +66,8 @@ class ChatRequest(BaseModel):
     policy: CanonPolicy = CanonPolicy.STRICT_CANON
     session_id: str | None = None
     workspace_id: str | None = None
+    chat_profile_id: str | None = None
     limit: int = Field(default=8, ge=1, le=50)
-
-
-class ChatResponse(BaseModel):
-    answer: str
-    sources: list[SourceReference]
-    trace_id: str
 
 
 class DocumentRead(BaseModel):
@@ -121,6 +116,15 @@ class MessageRead(BaseModel):
     content: str
     metadata: dict[str, Any]
     created_at: datetime
+
+
+class ChatResponse(BaseModel):
+    session: SessionSummary
+    user_message: MessageRead
+    assistant_message: MessageRead
+    answer: str
+    sources: list[SourceReference]
+    trace_id: str
 
 
 class SessionDetail(SessionSummary):

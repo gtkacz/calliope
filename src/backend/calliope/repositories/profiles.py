@@ -56,6 +56,18 @@ class ProfileRepository:
 
         return self._to_read(profile)
 
+    def get_by_id(self, profile_id: str) -> ProfileRead:
+        profile = self.session.get(ConnectionProfile, profile_id)
+        if profile is None:
+            raise AppError(
+                code="connection_profile_not_found",
+                message="Connection profile not found.",
+                status_code=404,
+                details={"profile_id": profile_id},
+            )
+
+        return self._to_read(profile)
+
     @staticmethod
     def _to_read(profile: ConnectionProfile) -> ProfileRead:
         return ProfileRead(

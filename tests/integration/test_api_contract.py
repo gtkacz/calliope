@@ -1,17 +1,98 @@
+from collections.abc import Iterator
+from pathlib import Path
 from typing import Annotated, Any, cast
 
 import pytest
+from calliope.api import dependencies as api_dependencies
 from calliope.api.app import create_app
 from calliope.api.dependencies import get_db_session
 from calliope.api.routes import chat as chat_route
 from calliope.config import Settings
-from calliope.domain.schemas import ChatRequest
+from calliope.domain.enums import ProfileCapability, ProfileKind
+from calliope.domain.schemas import ChatRequest, ProfileCreate, WorkspaceCreate
+from calliope.ingest.indexer import Reindexer
+from calliope.repositories.profiles import ProfileRepository
+from calliope.repositories.workspaces import WorkspaceRepository
 from fastapi import Depends
 from fastapi.testclient import TestClient
 from pytest import MonkeyPatch
 from sqlalchemy.orm import Session
 
 SETTINGS_WITHOUT_ENV_FILE: dict[str, Any] = {"_env_file": None}
+
+
+class FakeOpenAICompatibleClient:
+    chat_models: list[str] = []
+
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        api_key: str | None = None,
+    ) -> None:
+        self.base_url = base_url
+        self.model = model
+        self.api_key = api_key
+
+    async def embed(self, text: str) -> list[float]:
+        value = 1.0 if "Kaelen" in text else 0.1
+        return [value] * 384
+
+    async def chat(self, messages: list[dict[str, str]]) -> str:
+        self.chat_models.append(self.model)
+        return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+
+    async def aclose(self) -> None:
+        return None
+
+
+def _chat_client_with_session(db_session: Session) -> TestClient:
+    app = create_app(Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE))
+
+    def override_get_db_session() -> Iterator[Session]:
+        yield db_session
+
+    app.dependency_overrides[get_db_session] = override_get_db_session
+    return TestClient(app)
+
+
+def _seed_default_profiles(db_session: Session) -> None:
+    repository = ProfileRepository(db_session)
+    repository.create(
+        ProfileCreate(
+            name="default-embeddings",
+            kind=ProfileKind.OPENAI_COMPATIBLE,
+            base_url="http://models.local/v1",
+            model="default-embedding-model",
+            capabilities=[ProfileCapability.EMBEDDINGS],
+        )
+    )
+    repository.create(
+        ProfileCreate(
+            name="default-chat",
+            kind=ProfileKind.OPENAI_COMPATIBLE,
+            base_url="http://models.local/v1",
+            model="default-chat-model",
+            capabilities=[ProfileCapability.CHAT],
+        )
+    )
+
+
+def _seed_world_workspace(db_session: Session) -> str:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="api-chat-world",
+            root_path=str(Path("tests/fixtures/world").resolve()),
+        )
+    )
+    Reindexer(
+        db_session,
+        embedding_client=FakeOpenAICompatibleClient(
+            base_url="http://models.local/v1",
+            model="indexing-embedding-model",
+        ),
+    ).reindex_workspace(workspace.id)
+    return workspace.id
 
 
 def test_openapi_document_exists() -> None:
@@ -122,16 +203,149 @@ def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
     def fake_get_embedding_client(session: object) -> FakeEmbeddingClient:
         return embedding_client
 
-    def fake_get_chat_client(session: object) -> object:
+    def fake_get_chat_client_for_profile(
+        session: object,
+        profile_id: str | None,
+    ) -> object:
+        assert profile_id is None
         raise RuntimeError("chat client setup failed")
 
     monkeypatch.setattr(chat_route, "get_embedding_client", fake_get_embedding_client)
-    monkeypatch.setattr(chat_route, "get_chat_client", fake_get_chat_client)
+    monkeypatch.setattr(
+        chat_route,
+        "get_chat_client_for_profile",
+        fake_get_chat_client_for_profile,
+    )
 
     with pytest.raises(RuntimeError, match="chat client setup failed"):
         chat_route.chat(ChatRequest(message="Who is Kaelen?"), session=cast(Session, object()))
 
     assert embedding_client.closed
+
+
+def test_chat_route_uses_explicit_chat_profile(
+    db_session: Session,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api_dependencies,
+        "OpenAICompatibleClient",
+        FakeOpenAICompatibleClient,
+    )
+    FakeOpenAICompatibleClient.chat_models = []
+    _seed_default_profiles(db_session)
+    workspace_id = _seed_world_workspace(db_session)
+    chat_profile = ProfileRepository(db_session).create(
+        ProfileCreate(
+            name="explicit-chat",
+            kind=ProfileKind.OPENAI_COMPATIBLE,
+            base_url="http://models.local/v1",
+            model="explicit-chat-model",
+            capabilities=[ProfileCapability.CHAT],
+        )
+    )
+    client = _chat_client_with_session(db_session)
+
+    response = client.post(
+        "/v1/chat",
+        json={
+            "message": "Where was Kaelen exiled from?",
+            "workspace_id": workspace_id,
+            "chat_profile_id": chat_profile.id,
+            "limit": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assistant_message"]["metadata"]["chat_profile_id"] == chat_profile.id
+    assert FakeOpenAICompatibleClient.chat_models == ["explicit-chat-model"]
+
+
+def test_chat_route_returns_404_for_missing_explicit_chat_profile(
+    db_session: Session,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api_dependencies,
+        "OpenAICompatibleClient",
+        FakeOpenAICompatibleClient,
+    )
+    _seed_default_profiles(db_session)
+    client = _chat_client_with_session(db_session)
+
+    response = client.post(
+        "/v1/chat",
+        json={
+            "message": "Where was Kaelen exiled from?",
+            "chat_profile_id": "profile_missing",
+        },
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "connection_profile_not_found"
+
+
+def test_chat_route_returns_400_for_non_chat_explicit_profile(
+    db_session: Session,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api_dependencies,
+        "OpenAICompatibleClient",
+        FakeOpenAICompatibleClient,
+    )
+    _seed_default_profiles(db_session)
+    embeddings_only = ProfileRepository(db_session).create(
+        ProfileCreate(
+            name="embeddings-only",
+            kind=ProfileKind.OPENAI_COMPATIBLE,
+            base_url="http://models.local/v1",
+            model="embeddings-only-model",
+            capabilities=[ProfileCapability.EMBEDDINGS],
+        )
+    )
+    client = _chat_client_with_session(db_session)
+
+    response = client.post(
+        "/v1/chat",
+        json={
+            "message": "Where was Kaelen exiled from?",
+            "chat_profile_id": embeddings_only.id,
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "model_profile_missing_capability"
+
+
+def test_chat_route_omitted_chat_profile_uses_default_chat_profile(
+    db_session: Session,
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        api_dependencies,
+        "OpenAICompatibleClient",
+        FakeOpenAICompatibleClient,
+    )
+    FakeOpenAICompatibleClient.chat_models = []
+    _seed_default_profiles(db_session)
+    workspace_id = _seed_world_workspace(db_session)
+    client = _chat_client_with_session(db_session)
+
+    response = client.post(
+        "/v1/chat",
+        json={
+            "message": "Where was Kaelen exiled from?",
+            "workspace_id": workspace_id,
+            "limit": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assistant_message"]["metadata"]["chat_profile_id"] is None
+    assert FakeOpenAICompatibleClient.chat_models == ["default-chat-model"]
 
 
 def test_openapi_declares_calliope_contract() -> None:

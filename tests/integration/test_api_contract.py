@@ -131,4 +131,23 @@ def test_openapi_declares_calliope_contract() -> None:
     assert response.status_code == 200
     schema = response.json()
     assert schema["info"]["title"] == "Calliope"
-    assert sorted(path for path in schema["paths"] if path.startswith("/v1/"))
+    paths = schema["paths"]
+    expected_paths = {
+        "/v1/workspaces",
+        "/v1/reindex",
+        "/v1/search",
+        "/v1/chat",
+        "/v1/profiles",
+        "/v1/documents",
+        "/v1/sources/{chunk_id}",
+        "/v1/sessions/{session_id}",
+    }
+    assert expected_paths <= set(paths)
+    assert {"get", "post"} <= set(paths["/v1/workspaces"])
+    assert "post" in paths["/v1/reindex"]
+    assert "post" in paths["/v1/search"]
+    assert "post" in paths["/v1/chat"]
+    assert {"get", "post"} <= set(paths["/v1/profiles"])
+    assert "get" in paths["/v1/documents"]
+    assert "get" in paths["/v1/sources/{chunk_id}"]
+    assert "get" in paths["/v1/sessions/{session_id}"]

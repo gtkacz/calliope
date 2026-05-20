@@ -89,6 +89,7 @@ def test_openapi_contains_mvp_routes() -> None:
     assert "/v1/profiles" in paths
     assert "/v1/documents" in paths
     assert "/v1/sources/{chunk_id}" in paths
+    assert "/v1/sessions" in paths
     assert "/v1/sessions/{session_id}" in paths
 
 
@@ -150,6 +151,7 @@ def test_openapi_declares_calliope_contract() -> None:
         "/v1/profiles",
         "/v1/documents",
         "/v1/sources/{chunk_id}",
+        "/v1/sessions",
         "/v1/sessions/{session_id}",
         "/v1/conversation-folders",
         "/v1/conversation-folders/{folder_id}",
@@ -162,6 +164,7 @@ def test_openapi_declares_calliope_contract() -> None:
     assert {"get", "post"} <= set(paths["/v1/profiles"])
     assert "get" in paths["/v1/documents"]
     assert "get" in paths["/v1/sources/{chunk_id}"]
-    assert "get" in paths["/v1/sessions/{session_id}"]
+    assert "get" in paths["/v1/sessions"]
+    assert {"get", "patch", "delete"} <= set(paths["/v1/sessions/{session_id}"])
     assert {"get", "post"} <= set(paths["/v1/conversation-folders"])
     assert {"patch", "delete"} <= set(paths["/v1/conversation-folders/{folder_id}"])

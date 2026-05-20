@@ -5,7 +5,9 @@ from calliope.domain.schemas import (
     ConversationFolderCreate,
     ConversationFolderPatch,
     ConversationFolderRead,
-    SessionRead,
+    SessionDetail,
+    SessionPatch,
+    SessionSummary,
 )
 from calliope.repositories.chats import ChatRepository
 from fastapi import APIRouter, Depends, Response, status
@@ -14,12 +16,38 @@ from sqlalchemy.orm import Session
 router = APIRouter()
 
 
-@router.get("/v1/sessions/{session_id}", response_model=SessionRead)
+@router.get("/v1/sessions", response_model=list[SessionSummary])
+def list_sessions(
+    session: Annotated[Session, Depends(get_db_session)],
+    folder_id: str | None = None,
+) -> list[SessionSummary]:
+    return ChatRepository(session).list_sessions(folder_id=folder_id)
+
+
+@router.get("/v1/sessions/{session_id}", response_model=SessionDetail)
 def get_session(
     session_id: str,
     session: Annotated[Session, Depends(get_db_session)],
-) -> SessionRead:
-    return ChatRepository(session).get_session(session_id)
+) -> SessionDetail:
+    return ChatRepository(session).get_session_detail(session_id)
+
+
+@router.patch("/v1/sessions/{session_id}", response_model=SessionSummary)
+def update_session(
+    session_id: str,
+    payload: SessionPatch,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> SessionSummary:
+    return ChatRepository(session).update_session(session_id, payload)
+
+
+@router.delete("/v1/sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_session(
+    session_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Response:
+    ChatRepository(session).delete_session(session_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/v1/conversation-folders", response_model=list[ConversationFolderRead])

@@ -7,7 +7,11 @@ from calliope.domain.schemas import (
     ConversationFolderCreate,
     ConversationFolderPatch,
     ConversationFolderRead,
+    MessageRead,
+    SessionDetail,
+    SessionPatch,
     SessionRead,
+    SessionSummary,
     SourceReference,
 )
 from sqlalchemy import select
@@ -64,6 +68,47 @@ class ChatRepository:
 
     def get_session(self, session_id: str) -> SessionRead:
         return self._to_read(self.get_session_row(session_id))
+
+    def list_sessions(self, folder_id: str | None = None) -> list[SessionSummary]:
+        statement = select(ChatSession).order_by(ChatSession.updated_at.desc(), ChatSession.id)
+        if folder_id is not None:
+            statement = statement.where(ChatSession.folder_id == folder_id)
+        sessions = self.session.scalars(statement).all()
+        return [self._session_to_summary(chat_session) for chat_session in sessions]
+
+    def get_session_detail(self, session_id: str) -> SessionDetail:
+        chat_session = self.get_session_row(session_id)
+        messages = sorted(
+            chat_session.messages,
+            key=lambda message: (message.created_at, message.id),
+        )
+        return SessionDetail(
+            id=chat_session.id,
+            title=chat_session.title,
+            folder_id=chat_session.folder_id,
+            created_at=chat_session.created_at,
+            updated_at=chat_session.updated_at,
+            messages=[self._message_to_read(message) for message in messages],
+        )
+
+    def update_session(self, session_id: str, payload: SessionPatch) -> SessionSummary:
+        chat_session = self.get_session_row(session_id)
+        if payload.folder_id is not None:
+            self._get_folder_row(payload.folder_id)
+        if payload.title is not None:
+            chat_session.title = payload.title
+        if payload.folder_id is not None:
+            chat_session.folder_id = payload.folder_id
+        elif "folder_id" in payload.model_fields_set:
+            chat_session.folder_id = None
+        self.session.commit()
+        self.session.refresh(chat_session)
+        return self._session_to_summary(chat_session)
+
+    def delete_session(self, session_id: str) -> None:
+        chat_session = self.get_session_row(session_id)
+        self.session.delete(chat_session)
+        self.session.commit()
 
     def get_session_row(self, session_id: str) -> ChatSession:
         chat_session = self.session.get(ChatSession, session_id)
@@ -177,6 +222,27 @@ class ChatRepository:
             folder_id=chat_session.folder_id,
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
+        )
+
+    @staticmethod
+    def _session_to_summary(chat_session: ChatSession) -> SessionSummary:
+        return SessionSummary(
+            id=chat_session.id,
+            title=chat_session.title,
+            folder_id=chat_session.folder_id,
+            created_at=chat_session.created_at,
+            updated_at=chat_session.updated_at,
+        )
+
+    @staticmethod
+    def _message_to_read(message: ChatMessage) -> MessageRead:
+        return MessageRead(
+            id=message.id,
+            session_id=message.session_id,
+            role=message.role,
+            content=message.content,
+            metadata=message.metadata_json,
+            created_at=message.created_at,
         )
 
     @staticmethod

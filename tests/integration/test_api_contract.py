@@ -1,16 +1,15 @@
 from typing import Annotated, Any, cast
 
 import pytest
-from fastapi import Depends
-from fastapi.testclient import TestClient
-from pytest import MonkeyPatch
-from sqlalchemy.orm import Session
-
 from calliope.api.app import create_app
 from calliope.api.dependencies import get_db_session
 from calliope.api.routes import chat as chat_route
 from calliope.config import Settings
 from calliope.domain.schemas import ChatRequest
+from fastapi import Depends
+from fastapi.testclient import TestClient
+from pytest import MonkeyPatch
+from sqlalchemy.orm import Session
 
 SETTINGS_WITHOUT_ENV_FILE: dict[str, Any] = {"_env_file": None}
 
@@ -93,6 +92,17 @@ def test_openapi_contains_mvp_routes() -> None:
     assert "/v1/sessions/{session_id}" in paths
 
 
+def test_openapi_contains_conversation_folder_routes() -> None:
+    client = TestClient(create_app(Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE)))
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    assert {"get", "post"} <= set(paths["/v1/conversation-folders"])
+    assert {"patch", "delete"} <= set(paths["/v1/conversation-folders/{folder_id}"])
+
+
 def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
     monkeypatch: MonkeyPatch,
 ) -> None:
@@ -141,6 +151,8 @@ def test_openapi_declares_calliope_contract() -> None:
         "/v1/documents",
         "/v1/sources/{chunk_id}",
         "/v1/sessions/{session_id}",
+        "/v1/conversation-folders",
+        "/v1/conversation-folders/{folder_id}",
     }
     assert expected_paths <= set(paths)
     assert {"get", "post"} <= set(paths["/v1/workspaces"])
@@ -151,3 +163,5 @@ def test_openapi_declares_calliope_contract() -> None:
     assert "get" in paths["/v1/documents"]
     assert "get" in paths["/v1/sources/{chunk_id}"]
     assert "get" in paths["/v1/sessions/{session_id}"]
+    assert {"get", "post"} <= set(paths["/v1/conversation-folders"])
+    assert {"patch", "delete"} <= set(paths["/v1/conversation-folders/{folder_id}"])

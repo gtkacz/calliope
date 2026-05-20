@@ -53,12 +53,20 @@ class Reindexer:
                 workspace.include_globs,
                 workspace.exclude_globs,
             )
+            scanned_paths = {scanned.relative_path for scanned in scanned_files}
 
             indexed_documents = []
             for scanned in scanned_files:
                 parsed = parse_markdown_file(scanned.absolute_path, scanned.relative_path)
                 chunks = chunk_document(parsed)
                 indexed_documents.append((scanned, parsed, chunks))
+
+            existing_paths = document_repo.active_paths_for_workspace(workspace.id)
+            if existing_paths != scanned_paths:
+                document_repo.mark_missing_deleted(
+                    workspace_id=workspace.id,
+                    current_paths=scanned_paths,
+                )
 
             document_texts = [
                 [chunk.text for chunk in chunks] for _, _, chunks in indexed_documents

@@ -156,7 +156,7 @@ class HybridRetriever:
         statement = (
             select(Chunk.id)
             .join(Document)
-            .where(Chunk.embedding.is_not(None))
+            .where(Chunk.embedding.is_not(None), Document.deleted_at.is_(None))
             .order_by(Chunk.embedding.l2_distance(embedding))
             .limit(limit)
         )
@@ -177,7 +177,7 @@ class HybridRetriever:
         statement = (
             select(Chunk.id)
             .join(Document)
-            .where(Chunk.search_vector.op("@@")(ts_query))
+            .where(Chunk.search_vector.op("@@")(ts_query), Document.deleted_at.is_(None))
             .order_by(rank.desc(), Chunk.id.asc())
             .limit(limit)
         )

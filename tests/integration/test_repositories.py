@@ -215,3 +215,42 @@ def test_document_repository_upsert_returns_flushed_document_row(db_session) -> 
     assert isinstance(document, Document)
     assert document.id.startswith("document_")
     assert db_session.get(Document, document.id) is document
+
+
+def test_document_repository_public_reads_hide_deleted_documents(db_session) -> None:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(name="Deleted Document World", root_path="/tmp/deleted-document-world")
+    )
+    repo = DocumentRepository(db_session)
+    document = repo.upsert(
+        workspace_id=workspace.id,
+        path="notes.md",
+        title="Notes",
+        frontmatter={},
+        content_hash="abc",
+        modified_at_ns=1_700_000_000_000_000_000,
+    )
+    document.deleted_at = datetime.now(UTC)
+    db_session.commit()
+
+    assert repo.list() == []
+    try:
+        repo.get(document.id)
+    except AppError as exc:
+        assert exc.code == "document_not_found"
+        assert exc.status_code == 404
+    else:
+        raise AssertionError("expected AppError")
+
+    revived = repo.upsert(
+        workspace_id=workspace.id,
+        path="notes.md",
+        title="Notes",
+        frontmatter={},
+        content_hash="def",
+        modified_at_ns=1_700_000_000_000_000_001,
+    )
+
+    assert revived.id == document.id
+    assert revived.deleted_at is None
+    assert [listed.id for listed in repo.list()] == [document.id]

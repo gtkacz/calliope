@@ -3,15 +3,16 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from calliope.db.models import Document
-from calliope.domain.schemas import WorkspaceCreate
+from calliope.db.models import Chunk, Document
+from calliope.domain.schemas import SearchRequest, WorkspaceCreate
 from calliope.ingest import indexer
 from calliope.ingest.chunker import MarkdownChunk
 from calliope.ingest.indexer import Reindexer
 from calliope.repositories.workspaces import WorkspaceRepository
+from calliope.services.search import SearchService
 
 
 class FakeEmbeddingClient:
@@ -62,6 +63,67 @@ def test_reindex_workspace_persists_documents_and_chunks(db_session: Session) ->
 
     assert result.documents_indexed == 1
     assert result.chunks_indexed >= 3
+
+
+def test_reindex_workspace_prunes_deleted_markdown_file(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    note = tmp_path / "lore.md"
+    note.write_text(
+        "# Vanished Archive\n\n"
+        "The citrine astrolabe belongs to the hidden observatory.\n\n"
+        "## Inventory\n\n"
+        "Only the vanished archive mentions the citrine astrolabe.\n",
+        encoding="utf-8",
+    )
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(name="prune-world", root_path=str(tmp_path))
+    )
+    embedding_client = FakeEmbeddingClient()
+
+    first_result = Reindexer(db_session, embedding_client=embedding_client).reindex_workspace(
+        workspace.id
+    )
+
+    document = db_session.scalar(
+        select(Document).where(Document.workspace_id == workspace.id, Document.path == "lore.md")
+    )
+    assert document is not None
+    assert document.deleted_at is None
+    assert first_result.documents_indexed == 1
+    assert first_result.chunks_indexed > 0
+    assert (
+        db_session.scalar(select(Chunk).where(Chunk.document_id == document.id).limit(1))
+        is not None
+    )
+
+    note.unlink()
+
+    second_result = Reindexer(db_session, embedding_client=embedding_client).reindex_workspace(
+        workspace.id
+    )
+    db_session.refresh(document)
+    stale_chunk_count = db_session.scalar(
+        select(func.count()).select_from(Chunk).where(Chunk.document_id == document.id)
+    )
+    service = SearchService(db_session, embedding_client)
+    try:
+        search_response = service.search(
+            SearchRequest(
+                query="citrine astrolabe",
+                workspace_id=workspace.id,
+                limit=3,
+            )
+        )
+    finally:
+        service.close()
+
+    assert second_result.documents_indexed == 0
+    assert second_result.chunks_indexed == 0
+    assert document.deleted_at is not None
+    assert stale_chunk_count == 0
+    assert search_response.sources == []
 
 
 def test_reindex_workspace_reuses_one_event_loop_for_chunk_embeddings(

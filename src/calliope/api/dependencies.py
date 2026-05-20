@@ -2,7 +2,7 @@ import os
 from collections.abc import Iterator
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 from calliope.config import Settings
@@ -13,10 +13,17 @@ from calliope.llm.openai_compatible import OpenAICompatibleClient
 from calliope.services.profiles import ProfileService
 
 
-def get_db_session() -> Iterator[Session]:
-    factory = create_session_factory(Settings().database_url)
+def get_db_session(request: Request) -> Iterator[Session]:
+    settings = getattr(request.app.state, "settings", None) or Settings()
+    factory = create_session_factory(settings.database_url)
     with factory() as session:
         yield session
+
+
+def close_model_client(client: object) -> None:
+    close = getattr(client, "close", None)
+    if callable(close):
+        close()
 
 
 def api_key_for(profile: ProfileRead) -> str | None:

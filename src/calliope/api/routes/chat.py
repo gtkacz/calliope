@@ -3,7 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from calliope.api.dependencies import get_chat_client, get_db_session, get_embedding_client
+from calliope.api.dependencies import (
+    close_model_client,
+    get_chat_client,
+    get_db_session,
+    get_embedding_client,
+)
 from calliope.domain.schemas import ChatRequest, ChatResponse
 from calliope.ingest.indexer import EmbeddingClient
 from calliope.services.chat import ChatClient, ChatService
@@ -27,3 +32,6 @@ def chat(
         return service.chat(request)
     finally:
         service.close()
+        close_model_client(embedding_client)
+        if chat_client is not embedding_client:
+            close_model_client(chat_client)

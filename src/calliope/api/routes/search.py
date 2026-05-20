@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from calliope.api.dependencies import get_db_session, get_embedding_client
+from calliope.api.dependencies import close_model_client, get_db_session, get_embedding_client
 from calliope.domain.schemas import SearchRequest, SearchResponse
 from calliope.ingest.indexer import EmbeddingClient
 from calliope.services.search import SearchService
@@ -22,3 +22,4 @@ def search(
         return service.search(request)
     finally:
         service.close()
+        close_model_client(embedding_client)

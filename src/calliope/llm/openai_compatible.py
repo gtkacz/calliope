@@ -1,3 +1,6 @@
+import asyncio
+import threading
+from collections.abc import Coroutine
 from typing import Any
 
 import httpx
@@ -16,7 +19,9 @@ class OpenAICompatibleClient:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key or "not-needed"
+        self._owns_http_client = http_client is None
         self.http_client = http_client or httpx.AsyncClient(timeout=30)
+        self._closed = False
 
     async def embed(self, text: str) -> list[float]:
         response = await self._post(
@@ -44,6 +49,14 @@ class OpenAICompatibleClient:
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}
+
+    def close(self) -> None:
+        if self._closed:
+            return
+
+        self._closed = True
+        if self._owns_http_client:
+            self._run_sync(self.http_client.aclose())
 
     async def _post(
         self,
@@ -76,3 +89,25 @@ class OpenAICompatibleClient:
             status_code=502,
             details={"status_code": response.status_code, "body": response.text},
         )
+
+    def _run_sync(self, coroutine: Coroutine[Any, Any, None]) -> None:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(coroutine)
+            return
+
+        error: BaseException | None = None
+
+        def runner() -> None:
+            nonlocal error
+            try:
+                asyncio.run(coroutine)
+            except BaseException as exc:
+                error = exc
+
+        thread = threading.Thread(target=runner)
+        thread.start()
+        thread.join()
+        if error is not None:
+            raise error

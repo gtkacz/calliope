@@ -121,3 +121,14 @@ def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
         chat_route.chat(ChatRequest(message="Who is Kaelen?"), session=cast(Session, object()))
 
     assert embedding_client.closed
+
+
+def test_openapi_declares_calliope_contract() -> None:
+    client = TestClient(create_app(Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE)))
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["info"]["title"] == "Calliope"
+    assert sorted(path for path in schema["paths"] if path.startswith("/v1/"))

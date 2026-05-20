@@ -1,20 +1,21 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import inspect, text
-
 from calliope.db.models import (
     Base,
     ChatMessage,
     ChatSession,
     Chunk,
+    ConversationFolder,
     Document,
     RetrievalTrace,
     Workspace,
 )
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import WorkspaceCreate
+from calliope.repositories.chats import ChatRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
+from sqlalchemy import inspect, text
 
 
 def test_metadata_contains_mvp_tables() -> None:
@@ -156,6 +157,54 @@ def test_deleting_message_nulls_retrieval_trace_message_reference(db_session) ->
     db_session.refresh(trace)
 
     assert trace.message_id is None
+
+
+def test_metadata_contains_frontend_conversation_folder_tables() -> None:
+    assert "conversation_folders" in Base.metadata.tables
+    chat_sessions = Base.metadata.tables["chat_sessions"]
+    assert "folder_id" in chat_sessions.columns
+    folder_id = chat_sessions.columns["folder_id"]
+    folder_fk = next(iter(folder_id.foreign_keys))
+    assert folder_fk.ondelete == "SET NULL"
+
+    conversation_folders = Base.metadata.tables["conversation_folders"]
+    parent_id = conversation_folders.columns["parent_id"]
+    parent_fk = next(iter(parent_id.foreign_keys))
+    assert parent_fk.ondelete == "CASCADE"
+
+
+def test_deleting_folder_unfiles_sessions(db_session) -> None:
+    folder = ConversationFolder(name="Act I", position=0)
+    session = ChatSession(title="Scene", folder=folder)
+    db_session.add_all([folder, session])
+    db_session.commit()
+
+    db_session.delete(folder)
+    db_session.commit()
+    db_session.refresh(session)
+
+    assert session.folder_id is None
+
+
+def test_chat_repository_get_session_returns_folder_id(db_session) -> None:
+    folder = ConversationFolder(name="Act I", position=0)
+    session = ChatSession(title="Scene", folder=folder)
+    db_session.add_all([folder, session])
+    db_session.commit()
+
+    read = ChatRepository(db_session).get_session(session.id)
+
+    assert read.folder_id == folder.id
+
+
+def test_chat_repository_get_session_returns_none_folder_id_for_unfiled_session(db_session) -> None:
+    session = ChatSession(title="Loose Scene")
+    db_session.add(session)
+    db_session.commit()
+
+    read = ChatRepository(db_session).get_session(session.id)
+
+    assert read.folder_id is None
 
 
 def test_workspace_repository_creates_and_lists(db_session) -> None:

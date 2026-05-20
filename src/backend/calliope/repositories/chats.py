@@ -75,6 +75,7 @@ class ChatRepository:
         return SessionRead(
             id=chat_session.id,
             title=chat_session.title,
+            folder_id=chat_session.folder_id,
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
         )

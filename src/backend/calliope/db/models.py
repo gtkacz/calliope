@@ -88,11 +88,15 @@ class Chunk(Base):
     )
 
 
-class ChatSession(Base):
-    __tablename__ = "chat_sessions"
+class ConversationFolder(Base):
+    __tablename__ = "conversation_folders"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("session"))
-    title: Mapped[str | None] = mapped_column(Text)
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("folder"))
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    parent_id: Mapped[str | None] = mapped_column(
+        ForeignKey("conversation_folders.id", ondelete="CASCADE"),
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -105,6 +109,38 @@ class ChatSession(Base):
         onupdate=func.now(),
     )
 
+    parent: Mapped["ConversationFolder | None"] = relationship(
+        remote_side="ConversationFolder.id",
+        back_populates="children",
+    )
+    children: Mapped[list["ConversationFolder"]] = relationship(
+        back_populates="parent",
+        cascade="all, delete-orphan",
+    )
+    sessions: Mapped[list["ChatSession"]] = relationship(back_populates="folder")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("session"))
+    title: Mapped[str | None] = mapped_column(Text)
+    folder_id: Mapped[str | None] = mapped_column(
+        ForeignKey("conversation_folders.id", ondelete="SET NULL"),
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    folder: Mapped[ConversationFolder | None] = relationship(back_populates="sessions")
     messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="session",
         cascade="all, delete-orphan",

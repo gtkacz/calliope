@@ -31,9 +31,11 @@ def upgrade() -> None:
         sa.UniqueConstraint("name"),
     )
     op.create_table(
-        "chat_sessions",
+        "conversation_folders",
         sa.Column("id", sa.String(), nullable=False),
-        sa.Column("title", sa.Text()),
+        sa.Column("name", sa.Text(), nullable=False),
+        sa.Column("parent_id", sa.String()),
+        sa.Column("position", sa.Integer(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -45,6 +47,35 @@ def upgrade() -> None:
             sa.DateTime(timezone=True),
             nullable=False,
             server_default=sa.func.now(),
+        ),
+        sa.ForeignKeyConstraint(
+            ["parent_id"],
+            ["conversation_folders.id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "chat_sessions",
+        sa.Column("id", sa.String(), nullable=False),
+        sa.Column("title", sa.Text()),
+        sa.Column("folder_id", sa.String()),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.func.now(),
+        ),
+        sa.ForeignKeyConstraint(
+            ["folder_id"],
+            ["conversation_folders.id"],
+            ondelete="SET NULL",
         ),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -169,5 +200,6 @@ def downgrade() -> None:
     op.drop_table("documents")
     op.drop_table("connection_profiles")
     op.drop_table("chat_sessions")
+    op.drop_table("conversation_folders")
     op.drop_table("workspaces")
     op.execute("DROP EXTENSION IF EXISTS vector")

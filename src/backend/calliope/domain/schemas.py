@@ -85,8 +85,51 @@ class DocumentRead(BaseModel):
     indexed_at: datetime | None
 
 
-class SessionRead(BaseModel):
+class ConversationFolderCreate(BaseModel):
+    name: str
+    parent_id: str | None = None
+    position: int = 0
+
+
+class ConversationFolderPatch(BaseModel):
+    name: str | None = None
+    parent_id: str | None = None
+    position: int | None = None
+
+
+class ConversationFolderRead(BaseModel):
     id: str
-    title: str | None
+    name: str
+    parent_id: str | None
+    position: int
     created_at: datetime
     updated_at: datetime
+
+
+class SessionSummary(BaseModel):
+    id: str
+    title: str | None
+    folder_id: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MessageRead(BaseModel):
+    id: str
+    session_id: str
+    role: str
+    content: str
+    metadata: dict[str, Any]
+    created_at: datetime
+
+
+class SessionDetail(SessionSummary):
+    messages: list[MessageRead]
+
+
+class SessionPatch(BaseModel):
+    title: str | None = None
+    folder_id: str | None = None
+
+
+SessionRead = SessionSummary

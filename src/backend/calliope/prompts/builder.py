@@ -38,17 +38,10 @@ def build_chat_messages(
         },
         {
             "role": "user",
-            "content": (
-                f"Question:\n{message}\n\n"
-                f"Indexed canon sources:\n{source_blocks}"
-            ),
+            "content": (f"Question:\n{message}\n\nIndexed canon sources:\n{source_blocks}"),
         },
     ]
 
 
 def _format_source(source: SourceReference) -> str:
-    return (
-        f"Path: {source.path}\n"
-        f"Heading: {source.heading}\n"
-        f"Excerpt: {source.excerpt}"
-    )
+    return f"Path: {source.path}\nHeading: {source.heading}\nExcerpt: {source.excerpt}"

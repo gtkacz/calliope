@@ -50,9 +50,7 @@ class SearchService:
                     metadata={
                         "turn_kind": "search_result",
                         "query": request.query,
-                        "sources": [
-                            source.model_dump(mode="json") for source in sources
-                        ],
+                        "sources": [source.model_dump(mode="json") for source in sources],
                     },
                 )
                 chat_repo.touch_session(session_id)

@@ -169,7 +169,9 @@ def profiles_list(
 
     for profile in profiles:
         capabilities = ",".join(capability.value for capability in profile.capabilities)
-        typer.echo(f"{profile.id}\t{profile.name}\t{profile.kind.value}\t{profile.model}\t{capabilities}")
+        typer.echo(
+            f"{profile.id}\t{profile.name}\t{profile.kind.value}\t{profile.model}\t{capabilities}"
+        )
 
 
 @profiles_app.command("test")

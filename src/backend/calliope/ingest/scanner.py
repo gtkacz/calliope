@@ -61,7 +61,11 @@ def _match_segments(path_parts: list[str], pattern_parts: list[str]) -> bool:
             bool(path_parts) and _match_segments(path_parts[1:], pattern_parts)
         )
 
-    return bool(path_parts) and fnmatchcase(path_parts[0], pattern_part) and _match_segments(
-        path_parts[1:],
-        pattern_parts[1:],
+    return (
+        bool(path_parts)
+        and fnmatchcase(path_parts[0], pattern_part)
+        and _match_segments(
+            path_parts[1:],
+            pattern_parts[1:],
+        )
     )

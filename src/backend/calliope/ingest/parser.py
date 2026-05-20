@@ -78,9 +78,7 @@ def _split_sections(markdown: str, title: str) -> list[MarkdownSection]:
 
             current_level = len(match.group(1))
             heading_stack = {
-                level: heading
-                for level, heading in heading_stack.items()
-                if level < current_level
+                level: heading for level, heading in heading_stack.items() if level < current_level
             }
             heading_stack[current_level] = match.group(2).strip()
             current_heading_path = " > ".join(

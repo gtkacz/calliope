@@ -2,14 +2,24 @@ from sqlalchemy.orm import Session
 
 from calliope.domain.schemas import SearchRequest, SearchResponse
 from calliope.repositories.chunks import ChunkRepository
-from calliope.retrieval.hybrid import EmbeddingClient, HybridRetriever
+from calliope.retrieval.hybrid import EmbeddingClient, HybridRetriever, _AsyncRunner
 
 
 class SearchService:
-    def __init__(self, session: Session, embedding_client: EmbeddingClient) -> None:
+    def __init__(
+        self,
+        session: Session,
+        embedding_client: EmbeddingClient,
+        *,
+        async_runner: _AsyncRunner | None = None,
+    ) -> None:
         self.session = session
         self.embedding_client = embedding_client
-        self._retriever = HybridRetriever(self.session, self.embedding_client)
+        self._retriever = HybridRetriever(
+            self.session,
+            self.embedding_client,
+            async_runner=async_runner,
+        )
 
     def search(self, request: SearchRequest) -> SearchResponse:
         hits = self._retriever.retrieve(

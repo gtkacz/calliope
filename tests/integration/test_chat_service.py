@@ -1,11 +1,15 @@
+import asyncio
 from pathlib import Path
 
+import pytest
 from sqlalchemy.orm import Session
 
 from calliope.domain.enums import CanonPolicy
-from calliope.domain.schemas import ChatRequest, WorkspaceCreate
+from calliope.domain.schemas import ChatRequest, SourceReference, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.workspaces import WorkspaceRepository
+from calliope.retrieval.hybrid import HybridRetriever
 from calliope.services.chat import ChatService
 
 
@@ -49,3 +53,74 @@ def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> 
     assert "Velmora" in response.answer
     assert response.sources
     assert response.trace_id.startswith("trace_")
+
+
+class LoopRecordingChatClient:
+    def __init__(self) -> None:
+        self.loops: list[asyncio.AbstractEventLoop] = []
+
+    async def embed(self, text: str) -> list[float]:
+        self._record_loop()
+        return [0.1] * 384
+
+    async def chat(self, messages: list[dict[str, str]]) -> str:
+        self._record_loop()
+        return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+
+    def _record_loop(self) -> None:
+        loop = asyncio.get_running_loop()
+        if self.loops and loop is not self.loops[0]:
+            raise AssertionError("ChatService used multiple event loops for one async client")
+        self.loops.append(loop)
+
+
+def test_chat_service_reuses_one_event_loop_for_shared_embedding_and_chat_client(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(
+        self: HybridRetriever,
+        embedding: list[float],
+        *,
+        workspace_id: str | None,
+        limit: int,
+    ) -> list[str]:
+        return ["chunk_a"]
+
+    def fake_lexical_search(
+        self: HybridRetriever,
+        query: str,
+        *,
+        workspace_id: str | None,
+        limit: int,
+    ) -> list[str]:
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(
+        self: ChunkRepository,
+        chunk_id: str,
+        score: float = 1.0,
+    ) -> SourceReference:
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    client = LoopRecordingChatClient()
+    service = ChatService(db_session, embedding_client=client, chat_client=client)
+    try:
+        service.chat(ChatRequest(message="Where was Kaelen exiled from?", limit=1))
+        service.chat(ChatRequest(message="Where was Kaelen exiled from?", limit=1))
+    finally:
+        service.close()
+
+    assert len(client.loops) == 4
+    assert len({id(loop) for loop in client.loops}) == 1

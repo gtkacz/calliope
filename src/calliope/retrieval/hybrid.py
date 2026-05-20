@@ -94,10 +94,17 @@ def fuse_ranked_results(
 
 
 class HybridRetriever:
-    def __init__(self, session: Session, embedding_client: EmbeddingClient) -> None:
+    def __init__(
+        self,
+        session: Session,
+        embedding_client: EmbeddingClient,
+        *,
+        async_runner: _AsyncRunner | None = None,
+    ) -> None:
         self.session = session
         self.embedding_client = embedding_client
-        self._async_runner = _AsyncRunner()
+        self._async_runner = async_runner or _AsyncRunner()
+        self._owns_async_runner = async_runner is None
 
     def retrieve(
         self,
@@ -114,7 +121,8 @@ class HybridRetriever:
         return fuse_ranked_results(vector_ids, lexical_ids)[:limit]
 
     def close(self) -> None:
-        self._async_runner.close()
+        if self._owns_async_runner:
+            self._async_runner.close()
 
     def _vector_search(
         self,

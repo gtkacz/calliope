@@ -1,75 +1,18 @@
 from __future__ import annotations
 
-import asyncio
-import threading
-from collections.abc import Coroutine
-from typing import Any, Protocol, TypeVar
+from typing import Protocol
 
 from sqlalchemy.orm import Session
 
 from calliope.domain.schemas import ChatRequest, ChatResponse, SearchRequest
 from calliope.prompts.builder import build_chat_messages
 from calliope.repositories.chats import ChatRepository
-from calliope.retrieval.hybrid import EmbeddingClient
+from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner
 from calliope.services.search import SearchService
 
 
 class ChatClient(Protocol):
     async def chat(self, messages: list[dict[str, str]]) -> str: ...
-
-
-T = TypeVar("T")
-
-
-class _AsyncRunner:
-    def __init__(self) -> None:
-        self._loop: asyncio.AbstractEventLoop | None = None
-        self._thread: threading.Thread | None = None
-        self._started = threading.Event()
-        self._closed = False
-
-    def run(self, coroutine: Coroutine[Any, Any, T]) -> T:
-        if self._closed:
-            coroutine.close()
-            raise RuntimeError("Async runner is closed.")
-
-        loop = self._ensure_loop()
-        future = asyncio.run_coroutine_threadsafe(coroutine, loop)
-        return future.result()
-
-    def close(self) -> None:
-        if self._closed:
-            return
-
-        self._closed = True
-        if self._loop is not None:
-            self._loop.call_soon_threadsafe(self._loop.stop)
-        if self._thread is not None:
-            self._thread.join()
-
-    def _ensure_loop(self) -> asyncio.AbstractEventLoop:
-        if self._loop is None:
-            self._thread = threading.Thread(target=self._run_loop, daemon=True)
-            self._thread.start()
-            self._started.wait()
-
-        if self._loop is None:
-            raise RuntimeError("Async runner failed to start.")
-        return self._loop
-
-    def _run_loop(self) -> None:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        self._loop = loop
-        self._started.set()
-        try:
-            loop.run_forever()
-            loop.run_until_complete(loop.shutdown_asyncgens())
-        finally:
-            loop.close()
-
-    def __del__(self) -> None:
-        self.close()
 
 
 class ChatService:
@@ -90,7 +33,11 @@ class ChatService:
         if request.session_id is not None:
             repository.get_session_row(request.session_id)
 
-        search_service = SearchService(self.session, self.embedding_client)
+        search_service = SearchService(
+            self.session,
+            self.embedding_client,
+            async_runner=self._async_runner,
+        )
         try:
             search_response = search_service.search(
                 SearchRequest(

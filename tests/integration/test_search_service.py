@@ -1,15 +1,18 @@
 import asyncio
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy.orm import Session
-
+from calliope.db.models import ChatMessage
+from calliope.domain.errors import AppError
 from calliope.domain.schemas import SearchRequest, SourceReference, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.workspaces import WorkspaceRepository
 from calliope.retrieval.hybrid import HybridRetriever
 from calliope.services.search import SearchService
+from sqlalchemy.orm import Session
 
 
 class FakeEmbeddingClient:
@@ -38,6 +41,183 @@ def test_search_returns_sources_for_indexed_workspace(db_session: Session) -> No
 
     assert response.sources
     assert response.sources[0].path == "characters/kaelen.md"
+    assert response.session is None
+    assert response.search_message is None
+
+
+def test_search_service_persists_search_result_turn(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    service = SearchService(db_session, FakeEmbeddingClient())
+    try:
+        response = service.search(
+            SearchRequest(query="Kaelen exile", persist=True, limit=1)
+        )
+    finally:
+        service.close()
+
+    assert response.session is not None
+    assert response.search_message is not None
+    assert response.search_message.role == "search"
+    assert response.search_message.metadata["turn_kind"] == "search_result"
+    assert response.search_message.metadata["query"] == "Kaelen exile"
+    assert response.search_message.metadata["sources"][0]["path"] == "characters/kaelen.md"
+
+
+def test_search_service_persists_into_existing_session_and_updates_summary(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    chat_repo = ChatRepository(db_session)
+    chat_session = chat_repo.create_session(title="Existing")
+    chat_session.updated_at = datetime(2025, 1, 1, tzinfo=UTC)
+    db_session.commit()
+    original_updated_at = chat_session.updated_at
+
+    service = SearchService(db_session, FakeEmbeddingClient())
+    try:
+        response = service.search(
+            SearchRequest(
+                query="Kaelen exile",
+                session_id=chat_session.id,
+                persist=True,
+                limit=1,
+            )
+        )
+    finally:
+        service.close()
+
+    assert response.session == chat_repo.get_session_summary(chat_session.id)
+    assert response.session is not None
+    assert response.session.updated_at > original_updated_at
+    assert response.search_message is not None
+    assert response.search_message.session_id == chat_session.id
+    assert response.search_message.role == "search"
+    assert (
+        db_session.query(ChatMessage)
+        .filter_by(session_id=chat_session.id, role="search")
+        .count()
+        == 1
+    )
+
+
+def test_search_service_missing_session_id_persists_nothing(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    service = SearchService(db_session, FakeEmbeddingClient())
+    try:
+        with pytest.raises(AppError) as exc_info:
+            service.search(
+                SearchRequest(
+                    query="Kaelen exile",
+                    session_id="session_missing",
+                    persist=True,
+                    limit=1,
+                )
+            )
+    finally:
+        service.close()
+
+    assert exc_info.value.code == "session_not_found"
+    assert exc_info.value.details == {"session_id": "session_missing"}
+    assert db_session.query(ChatMessage).count() == 0
+
+
+def test_search_service_new_session_title_is_capped_at_80_chars(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            excerpt="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    query = "K" * 100
+    service = SearchService(db_session, FakeEmbeddingClient())
+    try:
+        response = service.search(SearchRequest(query=query, persist=True, limit=1))
+    finally:
+        service.close()
+
+    assert response.session is not None
+    assert response.session.title == "K" * 80
 
 
 class LoopRecordingEmbeddingClient:

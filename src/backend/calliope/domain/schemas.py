@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
 
@@ -45,11 +47,15 @@ class SourceReference(BaseModel):
 class SearchRequest(BaseModel):
     query: str
     workspace_id: str | None = None
+    session_id: str | None = None
     limit: int = Field(default=8, ge=1, le=50)
+    persist: bool = False
 
 
 class SearchResponse(BaseModel):
     sources: list[SourceReference]
+    session: SessionSummary | None = None
+    search_message: MessageRead | None = None
 
 
 class ReindexRequest(BaseModel):

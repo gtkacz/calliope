@@ -382,3 +382,17 @@ def test_openapi_declares_calliope_contract() -> None:
     assert {"get", "patch", "delete"} <= set(paths["/v1/sessions/{session_id}"])
     assert {"get", "post"} <= set(paths["/v1/conversation-folders"])
     assert {"patch", "delete"} <= set(paths["/v1/conversation-folders/{folder_id}"])
+
+
+def test_openapi_search_response_includes_nullable_session_turn_fields() -> None:
+    client = TestClient(create_app(Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE)))
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    search_response = response.json()["components"]["schemas"]["SearchResponse"]
+    properties = search_response["properties"]
+    assert properties["session"]["anyOf"][0]["$ref"].endswith("/SessionSummary")
+    assert properties["session"]["anyOf"][1]["type"] == "null"
+    assert properties["search_message"]["anyOf"][0]["$ref"].endswith("/MessageRead")
+    assert properties["search_message"]["anyOf"][1]["type"] == "null"

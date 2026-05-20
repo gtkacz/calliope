@@ -1,6 +1,4 @@
 import asyncio
-import threading
-from collections.abc import Coroutine
 from typing import Any
 
 import httpx
@@ -62,7 +60,16 @@ class OpenAICompatibleClient:
         if self._closed:
             return
 
-        self._run_sync(self.aclose())
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self.aclose())
+            return
+
+        raise RuntimeError(
+            "OpenAICompatibleClient.close() cannot be called while an event loop "
+            "is running. Use 'await aclose()' in async contexts."
+        )
 
     async def _post(
         self,
@@ -95,25 +102,3 @@ class OpenAICompatibleClient:
             status_code=502,
             details={"status_code": response.status_code, "body": response.text},
         )
-
-    def _run_sync(self, coroutine: Coroutine[Any, Any, None]) -> None:
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            asyncio.run(coroutine)
-            return
-
-        error: BaseException | None = None
-
-        def runner() -> None:
-            nonlocal error
-            try:
-                asyncio.run(coroutine)
-            except BaseException as exc:
-                error = exc
-
-        thread = threading.Thread(target=runner)
-        thread.start()
-        thread.join()
-        if error is not None:
-            raise error

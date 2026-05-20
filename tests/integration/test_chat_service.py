@@ -78,6 +78,12 @@ class LoopRecordingChatClient:
         self.close_loops.append(asyncio.get_running_loop())
 
 
+class FailingCloseChatClient(LoopRecordingChatClient):
+    async def aclose(self) -> None:
+        await super().aclose()
+        raise RuntimeError("chat close failed")
+
+
 def test_chat_service_reuses_one_event_loop_for_shared_embedding_and_chat_client(
     db_session: Session,
     monkeypatch: pytest.MonkeyPatch,
@@ -181,5 +187,42 @@ def test_chat_service_closes_owned_clients_on_shared_async_loop(
 
     service.chat(ChatRequest(message="Where was Kaelen exiled from?", limit=1))
     service.close()
+
+    assert client.close_loops == [client.loops[0]]
+
+
+def test_chat_service_search_cleanup_does_not_mask_search_error(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_source_for_chunk(
+        self: ChunkRepository,
+        chunk_id: str,
+        score: float = 1.0,
+    ) -> SourceReference:
+        raise RuntimeError("source lookup failed")
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", lambda *args, **kwargs: ["chunk_a"])
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", lambda *args, **kwargs: ["chunk_a"])
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fail_source_for_chunk)
+
+    client = FailingCloseChatClient()
+    service = ChatService(
+        db_session,
+        embedding_client=client,
+        chat_client=client,
+        close_embedding_client=True,
+        close_chat_client=True,
+    )
+
+    with pytest.raises(RuntimeError, match="source lookup failed"):
+        try:
+            service.chat(ChatRequest(message="Where was Kaelen exiled from?", limit=1))
+        except Exception:
+            try:
+                service.close()
+            except Exception:
+                pass
+            raise
 
     assert client.close_loops == [client.loops[0]]

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -13,7 +12,7 @@ from calliope.ingest.scanner import scan_workspace
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
-from calliope.retrieval.hybrid import aclose_client
+from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
 
 
 class EmbeddingClient(Protocol):
@@ -37,8 +36,10 @@ class Reindexer:
         self.session = session
         self.embedding_client = embedding_client
         self._close_embedding_client = close_embedding_client
+        self._async_runner: _AsyncRunner | None = None
 
     def reindex_workspace(self, workspace_id: str) -> ReindexResult:
+        operation_error: Exception | None = None
         try:
             workspace = WorkspaceRepository(self.session).get(workspace_id)
             document_repo = DocumentRepository(self.session)
@@ -62,9 +63,7 @@ class Reindexer:
             document_texts = [
                 [chunk.text for chunk in chunks] for _, _, chunks in indexed_documents
             ]
-            embeddings_by_document = asyncio.run(
-                self._embed_documents_and_maybe_close(document_texts)
-            )
+            embeddings_by_document = self._runner().run(self._embed_documents(document_texts))
 
             for (scanned, parsed, chunks), embeddings in zip(
                 indexed_documents,
@@ -87,9 +86,16 @@ class Reindexer:
                 documents_indexed=documents_indexed,
                 chunks_indexed=chunks_indexed,
             )
-        except Exception:
+        except Exception as exc:
+            operation_error = exc
             self.session.rollback()
             raise
+        finally:
+            try:
+                self.close()
+            except Exception:
+                if operation_error is None:
+                    raise
 
     async def _embed_documents(self, document_texts: list[list[str]]) -> list[list[list[float]]]:
         return [
@@ -97,12 +103,27 @@ class Reindexer:
             for chunk_texts in document_texts
         ]
 
-    async def _embed_documents_and_maybe_close(
-        self,
-        document_texts: list[list[str]],
-    ) -> list[list[list[float]]]:
+    def close(self) -> None:
+        cleanup_error: Exception | None = None
+        runner = self._async_runner or _AsyncRunner()
+        self._async_runner = runner
         try:
-            return await self._embed_documents(document_texts)
-        finally:
             if self._close_embedding_client:
-                await aclose_client(self.embedding_client)
+                runner.run(aclose_client(self.embedding_client))
+        except Exception as exc:
+            cleanup_error = exc
+        finally:
+            try:
+                runner.close()
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = exc
+            self._async_runner = None
+
+        if cleanup_error is not None:
+            raise cleanup_error
+
+    def _runner(self) -> _AsyncRunner:
+        if self._async_runner is None:
+            self._async_runner = _AsyncRunner()
+        return self._async_runner

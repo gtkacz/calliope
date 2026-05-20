@@ -29,7 +29,15 @@ def chat(
         close_embedding_client=True,
         close_chat_client=True,
     )
+    operation_error: Exception | None = None
     try:
         return service.chat(request)
+    except Exception as exc:
+        operation_error = exc
+        raise
     finally:
-        service.close()
+        try:
+            service.close()
+        except Exception:
+            if operation_error is None:
+                raise

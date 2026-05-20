@@ -108,6 +108,32 @@ async def test_aclose_closes_owned_http_client() -> None:
 
 
 @pytest.mark.asyncio
+async def test_close_raises_inside_running_event_loop() -> None:
+    client = OpenAICompatibleClient(
+        base_url="http://local/v1",
+        model="embed-model",
+    )
+
+    with pytest.raises(RuntimeError, match="Use 'await aclose\\(\\)'"):
+        client.close()
+
+    assert not client.http_client.is_closed
+    await client.aclose()
+    assert client.http_client.is_closed
+
+
+def test_close_closes_owned_http_client_from_sync_context() -> None:
+    client = OpenAICompatibleClient(
+        base_url="http://local/v1",
+        model="embed-model",
+    )
+
+    client.close()
+
+    assert client.http_client.is_closed
+
+
+@pytest.mark.asyncio
 async def test_aclose_does_not_close_injected_http_client() -> None:
     http_client = httpx.AsyncClient(
         transport=httpx.MockTransport(lambda request: httpx.Response(200))

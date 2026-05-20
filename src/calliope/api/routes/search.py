@@ -22,7 +22,15 @@ def search(
         embedding_client,
         close_embedding_client=True,
     )
+    operation_error: Exception | None = None
     try:
         return service.search(request)
+    except Exception as exc:
+        operation_error = exc
+        raise
     finally:
-        service.close()
+        try:
+            service.close()
+        except Exception:
+            if operation_error is None:
+                raise

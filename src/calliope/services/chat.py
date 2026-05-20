@@ -50,8 +50,15 @@ class ChatService:
                     limit=request.limit,
                 )
             )
+        except Exception:
+            try:
+                search_service.close()
+            except Exception:
+                pass
+            raise
         finally:
-            search_service.close()
+            if "search_response" in locals():
+                search_service.close()
 
         messages = build_chat_messages(
             message=request.message,
@@ -101,12 +108,27 @@ class ChatService:
         )
 
     def close(self) -> None:
+        cleanup_error: Exception | None = None
         try:
             closed_client_ids: set[int] = set()
             if self._close_embedding_client:
                 closed_client_ids.add(id(self.embedding_client))
-                self._async_runner.run(aclose_client(self.embedding_client))
+                try:
+                    self._async_runner.run(aclose_client(self.embedding_client))
+                except Exception as exc:
+                    cleanup_error = exc
             if self._close_chat_client and id(self.chat_client) not in closed_client_ids:
-                self._async_runner.run(aclose_client(self.chat_client))
+                try:
+                    self._async_runner.run(aclose_client(self.chat_client))
+                except Exception as exc:
+                    if cleanup_error is None:
+                        cleanup_error = exc
         finally:
-            self._async_runner.close()
+            try:
+                self._async_runner.close()
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = exc
+
+        if cleanup_error is not None:
+            raise cleanup_error

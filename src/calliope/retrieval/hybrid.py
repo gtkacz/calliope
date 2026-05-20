@@ -129,12 +129,22 @@ class HybridRetriever:
         return fuse_ranked_results(vector_ids, lexical_ids)[:limit]
 
     def close(self) -> None:
+        cleanup_error: Exception | None = None
         try:
             if self._close_embedding_client:
                 self._async_runner.run(aclose_client(self.embedding_client))
+        except Exception as exc:
+            cleanup_error = exc
         finally:
-            if self._owns_async_runner:
-                self._async_runner.close()
+            try:
+                if self._owns_async_runner:
+                    self._async_runner.close()
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = exc
+
+        if cleanup_error is not None:
+            raise cleanup_error
 
     def _vector_search(
         self,

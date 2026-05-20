@@ -56,6 +56,12 @@ class LoopRecordingEmbeddingClient:
         self.close_loop = asyncio.get_running_loop()
 
 
+class FailingCloseEmbeddingClient(LoopRecordingEmbeddingClient):
+    async def aclose(self) -> None:
+        await super().aclose()
+        raise RuntimeError("embedding close failed")
+
+
 def test_search_reuses_embedding_event_loop_for_repeated_sync_calls(
     db_session: Session,
     monkeypatch: pytest.MonkeyPatch,
@@ -158,5 +164,40 @@ def test_search_service_closes_owned_embedding_client_on_embedding_loop(
 
     service.search(SearchRequest(query="Kaelen exile", limit=1))
     service.close()
+
+    assert embedding_client.close_loop is embedding_client.loops[0]
+
+
+def test_search_route_cleanup_does_not_mask_search_error(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fail_vector_search(
+        self: HybridRetriever,
+        embedding: list[float],
+        *,
+        workspace_id: str | None,
+        limit: int,
+    ) -> list[str]:
+        raise RuntimeError("search failed")
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fail_vector_search)
+
+    embedding_client = FailingCloseEmbeddingClient()
+    service = SearchService(
+        db_session,
+        embedding_client,
+        close_embedding_client=True,
+    )
+
+    with pytest.raises(RuntimeError, match="search failed"):
+        try:
+            service.search(SearchRequest(query="Kaelen exile", limit=1))
+        except Exception:
+            try:
+                service.close()
+            except Exception:
+                pass
+            raise
 
     assert embedding_client.close_loop is embedding_client.loops[0]

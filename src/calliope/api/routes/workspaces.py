@@ -37,11 +37,12 @@ def reindex_workspace(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> ReindexResponse:
     embedding_client: EmbeddingClient = get_embedding_client(session)
-    result = Reindexer(
+    reindexer = Reindexer(
         session,
         embedding_client=embedding_client,
         close_embedding_client=True,
-    ).reindex_workspace(payload.workspace_id)
+    )
+    result = reindexer.reindex_workspace(payload.workspace_id)
     return ReindexResponse(
         documents_indexed=result.documents_indexed,
         chunks_indexed=result.chunks_indexed,

@@ -23,6 +23,7 @@ class SingleLoopEmbeddingClient:
     def __init__(self) -> None:
         self.loop_id: int | None = None
         self.close_loop_id: int | None = None
+        self.closed = False
 
     async def embed(self, text: str) -> list[float]:
         current_loop_id = id(asyncio.get_running_loop())
@@ -35,6 +36,16 @@ class SingleLoopEmbeddingClient:
 
     async def aclose(self) -> None:
         self.close_loop_id = id(asyncio.get_running_loop())
+        self.closed = True
+
+
+class FailingCloseEmbeddingClient(FakeEmbeddingClient):
+    def __init__(self) -> None:
+        self.closed = False
+
+    async def aclose(self) -> None:
+        self.closed = True
+        raise RuntimeError("embedding close failed")
 
 
 def test_reindex_workspace_persists_documents_and_chunks(db_session: Session) -> None:
@@ -91,6 +102,60 @@ def test_reindex_workspace_closes_owned_embedding_client_on_embedding_loop(
 
     assert result.documents_indexed == 1
     assert embedding_client.close_loop_id == embedding_client.loop_id
+
+
+def test_reindex_workspace_closes_owned_embedding_client_before_embedding_failures(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="parse-fail-world",
+            root_path=str(Path("tests/fixtures/world").resolve()),
+        )
+    )
+    embedding_client = SingleLoopEmbeddingClient()
+
+    def fail_parse(absolute_path: Path, relative_path: str) -> object:
+        raise RuntimeError("parse failed before embedding")
+
+    monkeypatch.setattr(indexer, "parse_markdown_file", fail_parse)
+
+    with pytest.raises(RuntimeError, match="parse failed before embedding"):
+        Reindexer(
+            db_session,
+            embedding_client=embedding_client,
+            close_embedding_client=True,
+        ).reindex_workspace(workspace.id)
+
+    assert embedding_client.closed
+
+
+def test_reindex_workspace_cleanup_does_not_mask_original_error(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="parse-fail-close-fail-world",
+            root_path=str(Path("tests/fixtures/world").resolve()),
+        )
+    )
+    embedding_client = FailingCloseEmbeddingClient()
+
+    def fail_parse(absolute_path: Path, relative_path: str) -> object:
+        raise RuntimeError("parse failed before embedding")
+
+    monkeypatch.setattr(indexer, "parse_markdown_file", fail_parse)
+
+    with pytest.raises(RuntimeError, match="parse failed before embedding"):
+        Reindexer(
+            db_session,
+            embedding_client=embedding_client,
+            close_embedding_client=True,
+        ).reindex_workspace(workspace.id)
+
+    assert embedding_client.closed
 
 
 def test_reindex_workspace_rolls_back_flushes_when_reindex_fails(

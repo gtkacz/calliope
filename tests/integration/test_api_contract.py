@@ -23,3 +23,19 @@ def test_app_retains_injected_settings() -> None:
     app = create_app(settings)
 
     assert app.state.settings is settings
+
+
+def test_openapi_contains_mvp_routes() -> None:
+    client = TestClient(create_app(Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE)))
+
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    paths = response.json()["paths"]
+    assert "/v1/workspaces" in paths
+    assert "/v1/reindex" in paths
+    assert "/v1/search" in paths
+    assert "/v1/chat" in paths
+    assert "/v1/profiles" in paths
+    assert "/v1/documents" in paths
+    assert "/v1/sessions/{session_id}" in paths

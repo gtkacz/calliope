@@ -86,4 +86,5 @@ def test_openapi_contains_mvp_routes() -> None:
     assert "/v1/chat" in paths
     assert "/v1/profiles" in paths
     assert "/v1/documents" in paths
+    assert "/v1/sources/{chunk_id}" in paths
     assert "/v1/sessions/{session_id}" in paths

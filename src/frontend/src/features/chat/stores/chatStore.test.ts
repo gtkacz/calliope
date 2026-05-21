@@ -1,0 +1,79 @@
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import * as chatApi from '../api'
+import { useChatStore } from './chatStore'
+
+beforeEach(() => {
+  setActivePinia(createPinia())
+  vi.restoreAllMocks()
+})
+
+describe('chatStore', () => {
+  it('loads folders and sessions', async () => {
+    vi.spyOn(chatApi, 'listFolders').mockResolvedValue([
+      {
+        id: 'folder_1',
+        name: 'Worldbuilding',
+        parent_id: null,
+        position: 0,
+        created_at: '2026-05-20T12:00:00Z',
+        updated_at: '2026-05-20T12:00:00Z',
+      },
+    ])
+    vi.spyOn(chatApi, 'listSessions').mockResolvedValue([
+      {
+        id: 'session_1',
+        title: 'Lake city',
+        folder_id: 'folder_1',
+        created_at: '2026-05-20T12:00:00Z',
+        updated_at: '2026-05-20T12:05:00Z',
+      },
+    ])
+
+    const store = useChatStore()
+    await store.refreshConversationList()
+
+    expect(store.folders).toHaveLength(1)
+    expect(store.sessions[0].title).toBe('Lake city')
+  })
+
+  it('adds messages from chat response', async () => {
+    vi.spyOn(chatApi, 'sendChat').mockResolvedValue({
+      session: {
+        id: 'session_1',
+        title: 'Lake city',
+        folder_id: null,
+        created_at: '2026-05-20T12:00:00Z',
+        updated_at: '2026-05-20T12:05:00Z',
+      },
+      user_message: {
+        id: 'message_user',
+        session_id: 'session_1',
+        role: 'user',
+        content: 'Question',
+        metadata: { turn_kind: 'chat_user' },
+        created_at: '2026-05-20T12:00:00Z',
+      },
+      assistant_message: {
+        id: 'message_assistant',
+        session_id: 'session_1',
+        role: 'assistant',
+        content: 'Answer',
+        metadata: { turn_kind: 'assistant' },
+        created_at: '2026-05-20T12:01:00Z',
+      },
+      answer: 'Answer',
+      sources: [],
+      trace_id: 'trace_1',
+    })
+
+    const store = useChatStore()
+    store.selectedWorkspaceId = 'workspace_1'
+    store.selectedChatProfileId = 'profile_1'
+    await store.submitMessage('Question')
+
+    expect(store.activeSessionId).toBe('session_1')
+    expect(store.messages.map((message) => message.role)).toEqual(['user', 'assistant'])
+  })
+})

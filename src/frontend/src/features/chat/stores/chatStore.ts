@@ -1,0 +1,105 @@
+import { defineStore } from 'pinia'
+
+import * as chatApi from '../api'
+import type {
+  CanonPolicy,
+  ComposerMode,
+  ConversationFolder,
+  MessageRead,
+  SessionSummary,
+} from '../types'
+
+interface ChatState {
+  folders: ConversationFolder[]
+  sessions: SessionSummary[]
+  activeSessionId: string | null
+  messages: MessageRead[]
+  mode: ComposerMode
+  policy: CanonPolicy
+  selectedWorkspaceId: string | null
+  selectedChatProfileId: string | null
+  pending: boolean
+  errorMessage: string | null
+}
+
+export const useChatStore = defineStore('chat', {
+  state: (): ChatState => ({
+    folders: [],
+    sessions: [],
+    activeSessionId: null,
+    messages: [],
+    mode: 'chat',
+    policy: 'strict_canon',
+    selectedWorkspaceId: null,
+    selectedChatProfileId: null,
+    pending: false,
+    errorMessage: null,
+  }),
+  getters: {
+    canSubmit(state): boolean {
+      if (state.pending || state.selectedWorkspaceId === null) return false
+      if (state.mode === 'chat' && state.selectedChatProfileId === null) return false
+      return true
+    },
+    unfiledSessions(state): SessionSummary[] {
+      return state.sessions.filter((session) => session.folder_id === null)
+    },
+  },
+  actions: {
+    async refreshConversationList() {
+      const [folders, sessions] = await Promise.all([chatApi.listFolders(), chatApi.listSessions()])
+      this.folders = folders
+      this.sessions = sessions
+    },
+    async openSession(sessionId: string) {
+      const detail = await chatApi.getSession(sessionId)
+      this.activeSessionId = detail.id
+      this.messages = detail.messages
+    },
+    async submitMessage(text: string) {
+      const trimmed = text.trim()
+      if (trimmed.length === 0 || !this.canSubmit) return
+      this.pending = true
+      this.errorMessage = null
+      try {
+        if (this.mode === 'chat') {
+          const response = await chatApi.sendChat({
+            message: trimmed,
+            policy: this.policy,
+            session_id: this.activeSessionId,
+            workspace_id: this.selectedWorkspaceId,
+            chat_profile_id: this.selectedChatProfileId as string,
+            limit: 8,
+          })
+          this.activeSessionId = response.session.id
+          this.upsertSession(response.session)
+          this.messages.push(response.user_message, response.assistant_message)
+        } else {
+          const response = await chatApi.sendSearch({
+            query: trimmed,
+            session_id: this.activeSessionId,
+            workspace_id: this.selectedWorkspaceId,
+            limit: 8,
+            persist: true,
+          })
+          if (response.session !== null) {
+            this.activeSessionId = response.session.id
+            this.upsertSession(response.session)
+          }
+          if (response.search_message !== null) {
+            this.messages.push(response.search_message)
+          }
+        }
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Request failed.'
+      } finally {
+        this.pending = false
+      }
+    },
+    upsertSession(session: SessionSummary) {
+      const index = this.sessions.findIndex((existing) => existing.id === session.id)
+      if (index === -1) this.sessions.unshift(session)
+      else this.sessions.splice(index, 1, session)
+    },
+  },
+})

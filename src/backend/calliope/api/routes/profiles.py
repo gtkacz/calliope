@@ -1,10 +1,9 @@
 from typing import Annotated, Any
 
 from calliope.api.dependencies import get_db_session
-from calliope.domain.errors import AppError
-from calliope.domain.schemas import ProfileCreate, ProfileRead
+from calliope.domain.schemas import ProfileCreate, ProfilePatch, ProfileRead
 from calliope.services.profiles import ProfileService
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/v1/profiles")
@@ -30,16 +29,25 @@ def get_profile(
     profile_id: str,
     session: Annotated[Session, Depends(get_db_session)],
 ) -> ProfileRead:
-    for profile in ProfileService(session).list():
-        if profile.id == profile_id:
-            return profile
+    return ProfileService(session).get_by_id(profile_id)
 
-    raise AppError(
-        code="connection_profile_not_found",
-        message="Connection profile not found.",
-        status_code=404,
-        details={"profile_id": profile_id},
-    )
+
+@router.patch("/{profile_id}", response_model=ProfileRead)
+def update_profile(
+    profile_id: str,
+    payload: ProfilePatch,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> ProfileRead:
+    return ProfileService(session).update(profile_id, payload)
+
+
+@router.delete("/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_profile(
+    profile_id: str,
+    session: Annotated[Session, Depends(get_db_session)],
+) -> Response:
+    ProfileService(session).delete(profile_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/{profile_id}/test")

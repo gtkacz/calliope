@@ -16,6 +16,13 @@ class WorkspaceCreate(BaseModel):
     )
 
 
+class WorkspacePatch(BaseModel):
+    name: str | None = None
+    root_path: str | None = None
+    include_globs: list[str] | None = None
+    exclude_globs: list[str] | None = None
+
+
 class WorkspaceRead(WorkspaceCreate):
     id: str
     created_at: datetime
@@ -28,6 +35,15 @@ class ProfileCreate(BaseModel):
     model: str
     api_key_ref: str | None = None
     capabilities: list[ProfileCapability]
+
+
+class ProfilePatch(BaseModel):
+    name: str | None = None
+    kind: ProfileKind | None = None
+    base_url: str | None = None
+    model: str | None = None
+    api_key_ref: str | None = None
+    capabilities: list[ProfileCapability] | None = None
 
 
 class ProfileRead(ProfileCreate):

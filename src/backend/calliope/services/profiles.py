@@ -1,6 +1,6 @@
 from calliope.domain.enums import ProfileCapability
 from calliope.domain.errors import AppError
-from calliope.domain.schemas import ProfileCreate, ProfileRead
+from calliope.domain.schemas import ProfileCreate, ProfilePatch, ProfileRead
 from calliope.repositories.profiles import ProfileRepository
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,12 @@ class ProfileService:
 
     def get_by_id(self, profile_id: str) -> ProfileRead:
         return self.repository.get_by_id(profile_id)
+
+    def update(self, profile_id: str, payload: ProfilePatch) -> ProfileRead:
+        return self.repository.update(profile_id, payload)
+
+    def delete(self, profile_id: str) -> None:
+        self.repository.delete(profile_id)
 
     def require_capability(self, name: str, capability: ProfileCapability) -> ProfileRead:
         profile = self.get_by_name(name)

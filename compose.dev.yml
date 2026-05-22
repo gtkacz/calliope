@@ -1,0 +1,89 @@
+# Development stack with hot reload.
+# Standalone — do NOT combine with docker-compose.yml.
+#   podman-compose -f compose.dev.yml up
+#   docker compose  -f compose.dev.yml up
+
+services:
+  postgres:
+    image: docker.io/pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: calliope
+      POSTGRES_PASSWORD: calliope
+      POSTGRES_DB: calliope
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - calliope_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U calliope -d calliope"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
+    entrypoint: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    user: root
+    environment:
+      CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
+      CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+    volumes:
+      - "${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:ro"
+      - ./src/backend:/app/src/backend:z
+      - ./alembic:/app/alembic:z
+      - ./alembic.ini:/app/alembic.ini:z,ro
+      - ./pyproject.toml:/app/pyproject.toml:z,ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    command:
+      - /app/.venv/bin/uvicorn
+      - calliope.api.app:create_app
+      - --factory
+      - --reload
+      - --reload-dir
+      - /app/src/backend
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      target: builder
+      args:
+        VITE_CALLIOPE_API_BASE_URL: ${VITE_CALLIOPE_API_BASE_URL:-http://localhost:8000}
+    environment:
+      VITE_CALLIOPE_API_BASE_URL: ${VITE_CALLIOPE_API_BASE_URL:-http://localhost:8000}
+      CHOKIDAR_USEPOLLING: "true"
+    command: ["bun", "run", "vite", "--host", "0.0.0.0", "--port", "5173"]
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
+    volumes:
+      - ./src/frontend:/app:z
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  calliope_pgdata:

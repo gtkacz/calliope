@@ -3,13 +3,16 @@ import { computed, onMounted } from 'vue'
 
 import { useChatStore } from '../stores/chatStore'
 import { useProfileStore } from '@/features/profiles/stores/profileStore'
+import { useSettingsStore } from '@/features/settings/stores/settingsStore'
 import { useWorkspaceStore } from '@/features/workspaces/stores/workspaceStore'
+import SettingsDialog from '@/features/settings/components/SettingsDialog.vue'
 import ComposerBar from './ComposerBar.vue'
 import ConversationDrawer from './ConversationDrawer.vue'
 import ConversationTimeline from './ConversationTimeline.vue'
 
 const chat = useChatStore()
 const profile = useProfileStore()
+const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 
 const activeWorkspaceName = computed(
@@ -47,6 +50,9 @@ onMounted(async () => {
       @open-session="chat.openSession"
     />
     <section class="chat-main">
+      <header class="chat-header">
+        <v-btn icon="mdi-cog" variant="text" aria-label="Settings" @click="settings.show()" />
+      </header>
       <ConversationTimeline
         :messages="chat.messages"
         :pending="chat.pending"
@@ -64,6 +70,7 @@ onMounted(async () => {
         @submit="chat.submitMessage"
       />
     </section>
+    <SettingsDialog />
   </div>
 </template>
 
@@ -75,7 +82,11 @@ onMounted(async () => {
 }
 .chat-main {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: auto 1fr auto;
   min-height: 0;
+}
+.chat-header {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

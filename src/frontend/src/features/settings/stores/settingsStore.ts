@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
 
+export type SettingsTab = 'profiles' | 'workspaces' | 'indexing' | 'appearance'
+
 export const useSettingsStore = defineStore('settings', {
-  state: () => ({ open: false, tab: 'profiles' as 'profiles' | 'workspaces' | 'indexing' }),
+  state: () => ({ open: false, tab: 'profiles' as SettingsTab }),
   actions: {
-    show(tab: 'profiles' | 'workspaces' | 'indexing' = 'profiles') {
+    show(tab: SettingsTab = 'profiles') {
       this.tab = tab
       this.open = true
     },

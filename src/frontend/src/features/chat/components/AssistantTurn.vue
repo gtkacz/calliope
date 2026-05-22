@@ -67,6 +67,7 @@ function displayRole(role: string): string {
 .assistant-turn__content {
   margin: 0;
   color: var(--calliope-paper);
+  font-family: var(--calliope-font-chat);
   font-size: 0.965rem;
   line-height: 1.7;
   white-space: pre-wrap;

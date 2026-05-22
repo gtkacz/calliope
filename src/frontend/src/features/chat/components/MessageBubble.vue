@@ -34,6 +34,7 @@ defineProps<{
 .message-bubble__content {
   margin: 0;
   color: var(--calliope-paper);
+  font-family: var(--calliope-font-chat);
   font-size: 0.95rem;
   line-height: 1.62;
   white-space: pre-wrap;

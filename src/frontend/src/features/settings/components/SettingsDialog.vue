@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { nextTick, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
 
-import { useSettingsStore } from '../stores/settingsStore'
+import { useSettingsStore, type SettingsTab } from '../stores/settingsStore'
 import ProfilePanel from '@/features/profiles/components/ProfilePanel.vue'
 import WorkspacePanel from '@/features/workspaces/components/WorkspacePanel.vue'
 import ReindexPanel from '@/features/workspaces/components/ReindexPanel.vue'
+import AppearancePanel from './AppearancePanel.vue'
 
 const settings = useSettingsStore()
 
 interface TabDef {
-  id: 'profiles' | 'workspaces' | 'indexing'
+  id: SettingsTab
   label: string
 }
 
@@ -17,6 +18,7 @@ const tabs: TabDef[] = [
   { id: 'profiles', label: 'LLM Profiles' },
   { id: 'workspaces', label: 'Workspaces' },
   { id: 'indexing', label: 'Indexing' },
+  { id: 'appearance', label: 'Appearance' },
 ]
 
 const tabRefs = ref<Record<string, HTMLButtonElement | null>>({})
@@ -97,6 +99,7 @@ onMounted(syncIndicator)
         <ProfilePanel v-if="settings.tab === 'profiles'" />
         <WorkspacePanel v-else-if="settings.tab === 'workspaces'" />
         <ReindexPanel v-else-if="settings.tab === 'indexing'" />
+        <AppearancePanel v-else-if="settings.tab === 'appearance'" />
       </div>
     </div>
   </v-dialog>

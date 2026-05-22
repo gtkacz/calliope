@@ -11,5 +11,11 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import vuetify from './vuetify'
+import { useAppearanceStore } from '@/features/settings/stores/appearanceStore'
 
-createApp(App).use(createPinia()).use(router).use(vuetify).mount('#app')
+const pinia = createPinia()
+const app = createApp(App).use(pinia).use(router).use(vuetify)
+
+useAppearanceStore().init()
+
+app.mount('#app')

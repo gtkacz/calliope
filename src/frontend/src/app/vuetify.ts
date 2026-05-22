@@ -27,5 +27,6 @@ export default createVuetify({
     VTextField: { density: 'compact', variant: 'outlined' },
     VTextarea: { density: 'compact', variant: 'outlined' },
     VSelect: { density: 'compact', variant: 'outlined' },
+    VCombobox: { density: 'compact', variant: 'outlined' },
   },
 })

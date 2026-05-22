@@ -36,6 +36,12 @@ services:
       CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
     ports:
       - "${BACKEND_HOST_PORT:-8000}:8000"
+    # Symmetric bind mount so absolute paths pasted into the UI's "Workspace
+    # root" field resolve to the same path inside the container. Override
+    # CALLIOPE_NOTES_DIR in .env to expose your real notes directory.
+    # The default lives under /var/tmp so rootless podman can auto-create it.
+    volumes:
+      - "${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:ro"
     # host.docker.internal lets the backend reach OpenAI-compatible services
     # (Ollama, etc.) running on the host. Podman provides host.containers.internal
     # natively; this mapping keeps profile URLs portable across both engines.

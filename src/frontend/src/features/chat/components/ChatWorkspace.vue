@@ -175,8 +175,7 @@ onMounted(loadInitialData)
   grid-template-rows: auto 1fr auto auto;
   min-width: 0;
   min-height: 0;
-  background: var(--calliope-ink);
-  border-left: 1px solid var(--calliope-border);
+  background: var(--calliope-ink-soft);
 }
 
 .chat-context {
@@ -185,8 +184,8 @@ onMounted(loadInitialData)
   justify-content: space-between;
   gap: 1rem;
   padding: 0.875rem 1.75rem;
-  border-bottom: 1px solid var(--calliope-border);
-  background: var(--calliope-ink);
+  border-bottom: 1px solid var(--calliope-border-strong);
+  background: var(--calliope-ink-soft);
 }
 
 .chat-context__meta {
@@ -281,8 +280,8 @@ onMounted(loadInitialData)
   padding: 0.7rem 1.75rem;
   font-size: 0.8125rem;
   color: var(--calliope-paper-muted);
-  border-top: 1px solid var(--calliope-border);
-  background: var(--calliope-ink);
+  border-top: 1px solid var(--calliope-border-strong);
+  background: var(--calliope-ink-soft);
 }
 
 .chat-hint__label {

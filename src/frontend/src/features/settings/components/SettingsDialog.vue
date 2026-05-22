@@ -104,9 +104,10 @@ onMounted(syncIndicator)
 
 <style scoped>
 .settings-shell {
-  background: var(--calliope-ink);
-  border: 1px solid var(--calliope-border);
+  background: var(--calliope-ink-top);
+  border: 1px solid var(--calliope-border-strong);
   border-radius: var(--calliope-radius-lg);
+  box-shadow: var(--calliope-shadow-lift);
   display: flex;
   flex-direction: column;
   max-height: 86vh;
@@ -119,7 +120,7 @@ onMounted(syncIndicator)
   justify-content: space-between;
   gap: 1rem;
   padding: 1.5rem 2rem 1.1rem;
-  border-bottom: 1px solid var(--calliope-border);
+  border-bottom: 1px solid var(--calliope-border-strong);
 }
 
 .settings-header__meta {
@@ -165,7 +166,7 @@ onMounted(syncIndicator)
   display: flex;
   gap: 0.4rem;
   padding: 0 2rem;
-  border-bottom: 1px solid var(--calliope-border);
+  border-bottom: 1px solid var(--calliope-border-strong);
 }
 
 .settings-tab {
@@ -210,6 +211,6 @@ onMounted(syncIndicator)
 .settings-body {
   padding: 1.5rem 2rem 2rem;
   overflow-y: auto;
-  background: var(--calliope-ink);
+  background: var(--calliope-ink-top);
 }
 </style>

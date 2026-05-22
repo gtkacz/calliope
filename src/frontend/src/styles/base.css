@@ -12,25 +12,35 @@
   /* Semantic palette (mirrors theme.ts; exposed for use beyond Vuetify tokens) */
   --calliope-ink: #0E0C09;
   --calliope-ink-soft: #18140E;
-  --calliope-ink-raised: #221C13;
+  --calliope-ink-raised: #2A2317;
+  --calliope-ink-top: #342B1C;
   --calliope-paper: #EFE7D6;
   --calliope-paper-muted: rgba(239, 231, 214, 0.66);
-  --calliope-paper-dim: rgba(239, 231, 214, 0.42);
-  --calliope-paper-faint: rgba(239, 231, 214, 0.14);
+  --calliope-paper-dim: rgba(239, 231, 214, 0.50);
+  --calliope-paper-faint: rgba(239, 231, 214, 0.18);
   --calliope-bronze: #C9A36A;
   --calliope-bronze-deep: #B5905A;
-  --calliope-bronze-glow: rgba(201, 163, 106, 0.18);
-  --calliope-bronze-veil: rgba(201, 163, 106, 0.08);
+  --calliope-bronze-glow: rgba(201, 163, 106, 0.22);
+  --calliope-bronze-veil: rgba(201, 163, 106, 0.10);
   --calliope-dim-teal: #5F8693;
   --calliope-warm-error: #D97B6B;
-  --calliope-warm-error-soft: rgba(217, 123, 107, 0.32);
-  --calliope-warm-error-veil: rgba(217, 123, 107, 0.06);
+  --calliope-warm-error-soft: rgba(217, 123, 107, 0.36);
+  --calliope-warm-error-veil: rgba(217, 123, 107, 0.08);
 
-  /* Borders / overlays */
-  --calliope-border: rgba(239, 231, 214, 0.08);
-  --calliope-border-strong: rgba(239, 231, 214, 0.14);
-  --calliope-overlay-hover: rgba(239, 231, 214, 0.04);
-  --calliope-overlay-active: rgba(201, 163, 106, 0.10);
+  /* Borders / overlays — values widened so layers separate by luminance, not hue. */
+  --calliope-border: rgba(239, 231, 214, 0.14);
+  --calliope-border-strong: rgba(239, 231, 214, 0.22);
+  --calliope-overlay-hover: rgba(239, 231, 214, 0.06);
+  --calliope-overlay-active: rgba(201, 163, 106, 0.18);
+
+  /* Elevation — soft directional shadow lets surfaces read as lifted even without color cues. */
+  --calliope-shadow-lift:
+    0 1px 0 rgba(239, 231, 214, 0.04) inset,
+    0 8px 24px rgba(0, 0, 0, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+  --calliope-shadow-rest:
+    0 1px 0 rgba(239, 231, 214, 0.03) inset,
+    0 2px 8px rgba(0, 0, 0, 0.32);
 
   /* Radii */
   --calliope-radius-xs: 4px;
@@ -178,19 +188,19 @@ body {
 
 /* Subtle field underlines that read as paper-cream-on-ink rather than Material */
 .v-field--variant-plain .v-field__outline::before {
-  border-color: var(--calliope-border);
+  border-color: var(--calliope-border-strong);
   opacity: 1;
 }
 
 .v-field--variant-plain.v-field--focused .v-field__outline::before {
   border-color: var(--calliope-bronze);
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
-/* Cleaner overlay scrim — warm ink, not pure black */
+/* Cleaner overlay scrim — warm ink, not pure black. Darker now so the lifted dialog reads as floating above page chrome rather than alongside it. */
 .v-overlay__scrim {
   background: var(--calliope-ink) !important;
-  opacity: 0.78 !important;
+  opacity: 0.86 !important;
 }
 
 /* Settings panel shared layout — keep visual rhythm across Profiles / Workspaces / Indexing */

@@ -176,8 +176,8 @@ function setMode(next: ComposerMode) {
   flex-direction: column;
   gap: 0.45rem;
   padding: 0.85rem 1.75rem 1.1rem;
-  background: var(--calliope-ink);
-  border-top: 1px solid var(--calliope-border);
+  background: var(--calliope-ink-soft);
+  border-top: 1px solid var(--calliope-border-strong);
 }
 
 .composer {
@@ -185,17 +185,20 @@ function setMode(next: ComposerMode) {
   flex-direction: column;
   gap: 0.55rem;
   padding: 0.85rem 1rem 0.75rem 1.15rem;
-  background: var(--calliope-ink-soft);
-  border: 1px solid var(--calliope-border);
+  background: var(--calliope-ink-raised);
+  border: 1px solid var(--calliope-border-strong);
   border-radius: var(--calliope-radius-xl);
+  box-shadow: var(--calliope-shadow-rest);
   transition:
     border-color var(--calliope-duration-base) var(--calliope-ease-out),
     box-shadow var(--calliope-duration-base) var(--calliope-ease-out);
 }
 
 .composer.is-focused {
-  border-color: var(--calliope-border-strong);
-  box-shadow: 0 0 0 4px var(--calliope-bronze-veil);
+  border-color: var(--calliope-bronze);
+  box-shadow:
+    var(--calliope-shadow-rest),
+    0 0 0 4px var(--calliope-bronze-veil);
 }
 
 .composer__input :deep(textarea) {
@@ -250,7 +253,7 @@ function setMode(next: ComposerMode) {
 }
 
 .composer__segment.is-active {
-  background: var(--calliope-ink-raised);
+  background: var(--calliope-ink-top);
   color: var(--calliope-paper);
 }
 
@@ -314,9 +317,9 @@ function setMode(next: ComposerMode) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--calliope-ink-raised);
+  background: var(--calliope-ink-top);
   color: var(--calliope-paper-muted);
-  border: 1px solid var(--calliope-border);
+  border: 1px solid var(--calliope-border-strong);
   border-radius: 50%;
   cursor: pointer;
   transition:

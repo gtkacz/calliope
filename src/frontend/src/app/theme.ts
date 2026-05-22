@@ -5,9 +5,9 @@ export const calliopeDark: ThemeDefinition = {
   colors: {
     background: '#0E0C09',
     surface: '#18140E',
-    'surface-bright': '#221C13',
-    'surface-light': '#221C13',
-    'surface-variant': '#1F1A12',
+    'surface-bright': '#2A2317',
+    'surface-light': '#342B1C',
+    'surface-variant': '#221C13',
     'on-surface': '#EFE7D6',
     'on-background': '#EFE7D6',
     'on-surface-variant': '#A8A091',
@@ -26,7 +26,7 @@ export const calliopeDark: ThemeDefinition = {
   },
   variables: {
     'border-color': '239, 231, 214',
-    'border-opacity': 0.08,
+    'border-opacity': 0.14,
     'high-emphasis-opacity': 0.92,
     'medium-emphasis-opacity': 0.66,
     'disabled-opacity': 0.32,

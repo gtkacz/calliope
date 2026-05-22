@@ -221,7 +221,7 @@ function formatTimestamp(iso: string): string {
   grid-template-rows: auto auto auto auto 1fr;
   min-height: 0;
   background: var(--calliope-ink);
-  border-right: 1px solid var(--calliope-border);
+  border-right: 1px solid var(--calliope-border-strong);
 }
 
 .drawer-brand {

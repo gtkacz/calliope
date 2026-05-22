@@ -1,14 +1,60 @@
 services:
   postgres:
-    image: pgvector/pgvector:pg16
+    image: docker.io/pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: calliope
       POSTGRES_PASSWORD: calliope
       POSTGRES_DB: calliope
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - calliope_pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U calliope -d calliope"]
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
+    entrypoint: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
+      CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
+    ports:
+      - "${BACKEND_HOST_PORT:-8000}:8000"
+    # host.docker.internal lets the backend reach OpenAI-compatible services
+    # (Ollama, etc.) running on the host. Podman provides host.containers.internal
+    # natively; this mapping keeps profile URLs portable across both engines.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_CALLIOPE_API_BASE_URL: ${VITE_CALLIOPE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:80"
+    depends_on:
+      - backend
+
+volumes:
+  calliope_pgdata:

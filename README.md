@@ -6,16 +6,35 @@ Calliope is also a Linux-first local markdown knowledge backend for worldbuildin
 
 ## Local Development
 
-Start local Postgres with pgvector:
+Stand up the full stack (Postgres + backend + frontend, with migrations applied) with one command:
+
+```bash
+docker compose up --build
+```
+
+Podman users on Fedora can substitute `podman compose up --build`. The frontend is served at <http://localhost:5173>, the backend OpenAPI at <http://127.0.0.1:8000/docs>, and the raw schema at <http://127.0.0.1:8000/openapi.json>.
+
+Copy `.env.example` to `.env` to override any of the default host ports or the frontend's baked-in backend URL.
+
+Run CLI commands inside the running backend container:
+
+```bash
+docker compose exec backend calliope workspace add /path/inside/container --name my-world
+docker compose exec backend calliope profiles add default-embeddings openai_compatible http://host.docker.internal:11434/v1 nomic-embed-text --capability embeddings
+docker compose exec backend calliope profiles add default-chat openai_compatible http://host.docker.internal:11434/v1 llama3.1 --capability chat
+docker compose exec backend calliope reindex my-world
+docker compose exec backend calliope search "ancient city beneath the lake"
+docker compose exec backend calliope chat "What does canon say about the lake city?"
+```
+
+Use `host.docker.internal` (mapped to `host-gateway` in `docker-compose.yml`) as the base URL when your OpenAI-compatible service (for example, Ollama) runs on the host. On Fedora, bind-mounting workspace markdown directories into the backend container requires the `:Z` suffix on the volume so SELinux relabels the directory for container access.
+
+### Without containers
+
+If you prefer to run services directly on your host, start just the database:
 
 ```bash
 docker compose up -d postgres
-```
-
-Podman users can run the same compose file:
-
-```bash
-podman-compose up -d postgres
 ```
 
 Install the application with development dependencies and apply migrations:
@@ -31,9 +50,7 @@ Run the API:
 uv run calliope serve
 ```
 
-OpenAPI docs are available at <http://127.0.0.1:8000/docs>. The raw schema is available at <http://127.0.0.1:8000/openapi.json>.
-
-Common CLI workflow:
+The host-side CLI workflow uses `127.0.0.1` as the model base URL:
 
 ```bash
 uv run calliope workspace add /path/to/world-notes --name my-world

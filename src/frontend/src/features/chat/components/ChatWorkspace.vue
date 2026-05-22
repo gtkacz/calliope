@@ -17,6 +17,7 @@ const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 
 const startupError = ref(false)
+const startupLoading = ref(false)
 const apiBaseUrlValue = apiBaseUrl()
 
 const activeWorkspaceName = computed(
@@ -29,12 +30,18 @@ function startNewConversation() {
 }
 
 async function loadInitialData() {
+  if (startupLoading.value) {
+    return
+  }
+  startupLoading.value = true
   startupError.value = false
   try {
     await Promise.all([workspace.refresh(), profile.refresh(), chat.refreshConversationList()])
   } catch {
     startupError.value = true
     return
+  } finally {
+    startupLoading.value = false
   }
   if (chat.selectedWorkspaceId === null && workspace.workspaces.length > 0) {
     chat.selectedWorkspaceId = workspace.workspaces[0].id
@@ -60,7 +67,7 @@ onMounted(loadInitialData)
     <section class="chat-main">
       <v-alert v-if="startupError" type="error" variant="tonal">
         Backend unavailable at {{ apiBaseUrlValue }}.
-        <v-btn variant="text" @click="loadInitialData">Retry</v-btn>
+        <v-btn variant="text" :loading="startupLoading" :disabled="startupLoading" @click="loadInitialData">Retry</v-btn>
       </v-alert>
       <v-alert v-else-if="workspace.workspaces.length === 0" type="warning" variant="tonal">
         Create or select a workspace in Settings before submitting turns.

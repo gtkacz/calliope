@@ -1,3 +1,5 @@
+from typing import Any
+
 from calliope.api.app import create_app
 from calliope.api.dependencies import get_db_session
 from calliope.config import Settings
@@ -7,7 +9,7 @@ from calliope.repositories.chats import ChatRepository
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-SETTINGS_WITHOUT_ENV_FILE = {"_env_file": None}
+SETTINGS_WITHOUT_ENV_FILE: dict[str, Any] = {"_env_file": None}
 
 
 def _client_with_session(db_session: Session) -> TestClient:

@@ -45,53 +45,99 @@ async function save() {
 </script>
 
 <template>
-  <div class="settings-grid">
-    <v-list density="compact">
-      <v-list-item v-for="workspace in store.workspaces" :key="workspace.id" :title="workspace.name" :subtitle="workspace.root_path">
-        <template #append>
-          <v-btn icon="mdi-pencil" variant="text" aria-label="Edit workspace" @click="edit(workspace)" />
-          <v-btn icon="mdi-delete-outline" variant="text" aria-label="Delete workspace" @click="store.deleteWorkspace(workspace.id)" />
-        </template>
-      </v-list-item>
-    </v-list>
-    <form class="settings-form" @submit.prevent="save">
-      <v-text-field v-model="form.name" label="Name" />
-      <v-text-field
-        v-model="form.root_path"
-        label="Workspace root"
-        hint="Absolute path visible to the backend container (see CALLIOPE_NOTES_DIR in .env)"
-        persistent-hint
-      />
-      <v-combobox
-        v-model="form.include_globs"
-        label="Include globs"
-        multiple
-        chips
-        closable-chips
-        hide-no-data
-      />
-      <v-combobox
-        v-model="form.exclude_globs"
-        label="Exclude globs"
-        multiple
-        chips
-        closable-chips
-        hide-no-data
-      />
-      <v-alert v-if="store.errorMessage" type="error" variant="tonal">{{ store.errorMessage }}</v-alert>
-      <v-btn type="submit" color="primary">Save workspace</v-btn>
+  <div class="panel-grid">
+    <section class="panel-list">
+      <header class="panel-list__head">
+        <span class="calliope-eyebrow">Workspaces</span>
+        <h3 class="panel-list__title calliope-serif">Note sources</h3>
+      </header>
+      <ul class="panel-items">
+        <li v-for="workspace in store.workspaces" :key="workspace.id" class="panel-item">
+          <div class="panel-item__text">
+            <span class="panel-item__title calliope-serif">{{ workspace.name }}</span>
+            <span class="panel-item__sub calliope-mono">{{ workspace.root_path }}</span>
+          </div>
+          <div class="panel-item__actions">
+            <button
+              type="button"
+              class="panel-icon-btn"
+              aria-label="Edit workspace"
+              @click="edit(workspace)"
+            >
+              <v-icon icon="mdi-pencil-outline" size="16" />
+            </button>
+            <button
+              type="button"
+              class="panel-icon-btn panel-icon-btn--danger"
+              aria-label="Delete workspace"
+              @click="store.deleteWorkspace(workspace.id)"
+            >
+              <v-icon icon="mdi-close" size="16" />
+            </button>
+          </div>
+        </li>
+        <li v-if="store.workspaces.length === 0" class="panel-empty calliope-mono">
+          No workspaces yet
+        </li>
+      </ul>
+    </section>
+
+    <form class="panel-form" @submit.prevent="save">
+      <header class="panel-form__head">
+        <span class="calliope-eyebrow">{{ editingId ? 'Editing' : 'New workspace' }}</span>
+        <h3 class="panel-form__title calliope-serif">
+          {{ editingId ? form.name || 'Workspace' : 'Point Calliope at a directory' }}
+        </h3>
+      </header>
+
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Name</label>
+        <v-text-field v-model="form.name" placeholder="e.g. Personal notes" />
+      </div>
+
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Workspace root</label>
+        <v-text-field v-model="form.root_path" placeholder="/notes" />
+        <span class="panel-field__hint">
+          Absolute path visible to the backend container. See
+          <span class="calliope-mono">CALLIOPE_NOTES_DIR</span> in
+          <span class="calliope-mono">.env</span>.
+        </span>
+      </div>
+
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Include globs</label>
+        <v-combobox
+          v-model="form.include_globs"
+          multiple
+          chips
+          closable-chips
+          hide-no-data
+          placeholder="**/*.md"
+        />
+      </div>
+
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Exclude globs</label>
+        <v-combobox
+          v-model="form.exclude_globs"
+          multiple
+          chips
+          closable-chips
+          hide-no-data
+          placeholder=".git/**"
+        />
+      </div>
+
+      <v-alert v-if="store.errorMessage" type="error" variant="tonal" class="panel-alert">
+        {{ store.errorMessage }}
+      </v-alert>
+
+      <div class="panel-form__actions">
+        <v-btn type="submit" color="primary">
+          {{ editingId ? 'Save changes' : 'Add workspace' }}
+        </v-btn>
+      </div>
     </form>
   </div>
 </template>
-
-<style scoped>
-.settings-grid {
-  display: grid;
-  grid-template-columns: minmax(240px, 340px) 1fr;
-  gap: 18px;
-}
-.settings-form {
-  display: grid;
-  gap: 10px;
-}
-</style>

@@ -1,5 +1,5 @@
 <template>
-  <v-app>
+  <v-app theme="calliopeDark">
     <v-main class="calliope-app">
       <router-view />
     </v-main>
@@ -9,6 +9,8 @@
 <style scoped>
 .calliope-app {
   min-height: 100vh;
-  background: rgb(var(--v-theme-background));
+  background: var(--calliope-ink);
+  color: var(--calliope-paper);
+  font-family: var(--calliope-font-body);
 }
 </style>

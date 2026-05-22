@@ -1,0 +1,350 @@
+/* Calliope — Dark Editorial Studio
+ * Global base styles, custom CSS variables, refined chrome.
+ * Components reference these tokens; never hardcode the palette.
+ */
+
+:root {
+  /* Type families */
+  --calliope-font-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
+  --calliope-font-body: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --calliope-font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
+
+  /* Semantic palette (mirrors theme.ts; exposed for use beyond Vuetify tokens) */
+  --calliope-ink: #0E0C09;
+  --calliope-ink-soft: #18140E;
+  --calliope-ink-raised: #221C13;
+  --calliope-paper: #EFE7D6;
+  --calliope-paper-muted: rgba(239, 231, 214, 0.66);
+  --calliope-paper-dim: rgba(239, 231, 214, 0.42);
+  --calliope-paper-faint: rgba(239, 231, 214, 0.14);
+  --calliope-bronze: #C9A36A;
+  --calliope-bronze-deep: #B5905A;
+  --calliope-bronze-glow: rgba(201, 163, 106, 0.18);
+  --calliope-bronze-veil: rgba(201, 163, 106, 0.08);
+  --calliope-dim-teal: #5F8693;
+  --calliope-warm-error: #D97B6B;
+  --calliope-warm-error-soft: rgba(217, 123, 107, 0.32);
+  --calliope-warm-error-veil: rgba(217, 123, 107, 0.06);
+
+  /* Borders / overlays */
+  --calliope-border: rgba(239, 231, 214, 0.08);
+  --calliope-border-strong: rgba(239, 231, 214, 0.14);
+  --calliope-overlay-hover: rgba(239, 231, 214, 0.04);
+  --calliope-overlay-active: rgba(201, 163, 106, 0.10);
+
+  /* Radii */
+  --calliope-radius-xs: 4px;
+  --calliope-radius-sm: 6px;
+  --calliope-radius-md: 10px;
+  --calliope-radius-lg: 14px;
+  --calliope-radius-xl: 20px;
+  --calliope-radius-pill: 9999px;
+
+  /* Motion */
+  --calliope-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --calliope-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --calliope-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --calliope-duration-fast: 150ms;
+  --calliope-duration-base: 220ms;
+  --calliope-duration-slow: 320ms;
+
+  /* Vuetify font override */
+  --v-font-family: var(--calliope-font-body);
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--calliope-font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--calliope-paper);
+  background: var(--calliope-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+::selection {
+  background: rgba(201, 163, 106, 0.36);
+  color: var(--calliope-paper);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--calliope-paper-faint) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--calliope-paper-faint);
+  border-radius: var(--calliope-radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--calliope-border-strong);
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--calliope-bronze);
+  outline-offset: 2px;
+  border-radius: var(--calliope-radius-sm);
+}
+
+/* Editorial utility classes — used sparingly across components */
+
+.calliope-display {
+  font-family: var(--calliope-font-display);
+  font-weight: 380;
+  font-variation-settings: 'opsz' 144, 'SOFT' 50;
+  letter-spacing: -0.012em;
+  line-height: 1.04;
+}
+
+.calliope-display-lg {
+  font-family: var(--calliope-font-display);
+  font-weight: 380;
+  font-variation-settings: 'opsz' 144, 'SOFT' 60;
+  letter-spacing: -0.018em;
+  line-height: 1.02;
+  font-size: clamp(2.25rem, 4.5vw, 3.5rem);
+}
+
+.calliope-serif {
+  font-family: var(--calliope-font-display);
+  font-feature-settings: 'liga', 'kern';
+}
+
+.calliope-mono {
+  font-family: var(--calliope-font-mono);
+  font-feature-settings: 'ss01', 'ss02';
+}
+
+.calliope-eyebrow {
+  font-family: var(--calliope-font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--calliope-paper-muted);
+}
+
+.calliope-muted {
+  color: var(--calliope-paper-muted);
+}
+
+.calliope-dim {
+  color: var(--calliope-paper-dim);
+}
+
+/* Force Vuetify components to inherit the editorial body font */
+.v-application,
+.v-application__wrap {
+  font-family: var(--calliope-font-body);
+  background: var(--calliope-ink);
+}
+
+/* Subtle field underlines that read as paper-cream-on-ink rather than Material */
+.v-field--variant-plain .v-field__outline::before {
+  border-color: var(--calliope-border);
+  opacity: 1;
+}
+
+.v-field--variant-plain.v-field--focused .v-field__outline::before {
+  border-color: var(--calliope-bronze);
+  opacity: 0.6;
+}
+
+/* Cleaner overlay scrim — warm ink, not pure black */
+.v-overlay__scrim {
+  background: var(--calliope-ink) !important;
+  opacity: 0.78 !important;
+}
+
+/* Settings panel shared layout — keep visual rhythm across Profiles / Workspaces / Indexing */
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) 1fr;
+  gap: 1.75rem;
+}
+
+@media (max-width: 760px) {
+  .panel-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel-list,
+.panel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.panel-list__head,
+.panel-form__head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--calliope-border);
+}
+
+.panel-list__title,
+.panel-form__title {
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--calliope-paper);
+  letter-spacing: -0.008em;
+}
+
+.panel-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.4rem;
+  border-bottom: 1px solid var(--calliope-border);
+  transition: background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.panel-item:hover {
+  background: var(--calliope-overlay-hover);
+}
+
+.panel-item__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.panel-item__title {
+  font-size: 0.92rem;
+  color: var(--calliope-paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-item__sub {
+  font-size: 0.7rem;
+  color: var(--calliope-paper-dim);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-item__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  opacity: 0.4;
+  transition: opacity var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.panel-item:hover .panel-item__actions,
+.panel-item:focus-within .panel-item__actions {
+  opacity: 1;
+}
+
+.panel-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: var(--calliope-radius-sm);
+  color: var(--calliope-paper-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.panel-icon-btn:hover {
+  background: var(--calliope-overlay-hover);
+  color: var(--calliope-paper);
+}
+
+.panel-icon-btn--danger:hover {
+  color: var(--calliope-warm-error);
+}
+
+.panel-empty {
+  padding: 0.85rem 0.4rem;
+  color: var(--calliope-paper-dim);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+.panel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.panel-field__label {
+  color: var(--calliope-paper-dim);
+}
+
+.panel-field__hint {
+  font-size: 0.72rem;
+  color: var(--calliope-paper-dim);
+  line-height: 1.5;
+  letter-spacing: 0.005em;
+}
+
+.panel-alert {
+  margin-top: 0.25rem;
+}
+
+.panel-form__actions {
+  margin-top: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}

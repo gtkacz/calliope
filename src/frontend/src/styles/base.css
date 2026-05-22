@@ -3,11 +3,13 @@
  * Components reference these tokens; never hardcode the palette.
  */
 
+ @import url('https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Libertinus+Mono&display=swap');
+
 :root {
   /* Type families */
   --calliope-font-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
   --calliope-font-body: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --calliope-font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
+  --calliope-font-mono: 'David Libre', 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
   --calliope-font-chat: var(--calliope-font-body);
 
   /* Semantic palette (mirrors theme.ts; exposed for use beyond Vuetify tokens) */

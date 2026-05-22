@@ -29,6 +29,7 @@ export const DISPLAY_FONTS: readonly FontOption[] = [
   { id: 'grenze-gotisch', label: 'Grenze Gotisch', stack: "'Grenze Gotisch', serif" },
   { id: 'germania-one', label: 'Germania One', stack: "'Germania One', serif" },
   { id: 'astloch', label: 'Astloch', stack: "'Astloch', serif" },
+  { id: 'almendra-sc', label: 'Almendra SC', stack: "'Almendra SC', serif" },
 ] as const
 
 export const CHAT_FONTS: readonly FontOption[] = [
@@ -39,6 +40,11 @@ export const CHAT_FONTS: readonly FontOption[] = [
   },
   { id: 'texturina', label: 'Texturina', stack: "'Texturina', serif" },
   { id: 'nova-cut', label: 'Nova Cut', stack: "'Nova Cut', serif" },
+  { id: 'jim-nightshade', label: 'Jim Nightshade', stack: "'Jim Nightshade', cursive" },
+  { id: 'almendra', label: 'Almendra', stack: "'Almendra', serif" },
+  { id: 'quintessential', label: 'Quintessential', stack: "'Quintessential', serif" },
+  { id: 'fondamento', label: 'Fondamento', stack: "'Fondamento', cursive" },
+  { id: 'cormorant', label: 'Cormorant', stack: "'Cormorant', serif" },
 ] as const
 
 export function findDisplayFont(id: string | null | undefined): FontOption {

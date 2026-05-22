@@ -1,6 +1,6 @@
 import '@mdi/font/css/materialdesignicons.css'
 import 'roboto-fontface/css/roboto/roboto-fontface.css'
-import 'vuetify/styles'
+import 'vuetify/dist/vuetify.css'
 
 import { createPinia } from 'pinia'
 import { createApp } from 'vue'

@@ -108,6 +108,7 @@ onMounted(loadInitialData)
 .chat-main {
   display: grid;
   grid-template-rows: auto 1fr auto;
+  min-width: 0;
   min-height: 0;
 }
 .chat-header {

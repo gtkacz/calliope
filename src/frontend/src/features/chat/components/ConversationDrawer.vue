@@ -42,7 +42,7 @@ function createFolder() {
 </script>
 
 <template>
-  <v-navigation-drawer permanent width="320" class="conversation-drawer">
+  <aside class="conversation-drawer">
     <div class="drawer-header">
       <v-btn block color="primary" prepend-icon="mdi-plus" @click="emit('new-session')">
         New conversation
@@ -86,11 +86,16 @@ function createFolder() {
       />
       <v-list-item v-if="unfiledSessions.length === 0" title="No unfiled conversations" class="empty-row" />
     </v-list>
-  </v-navigation-drawer>
+  </aside>
 </template>
 
 <style scoped>
 .conversation-drawer {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: rgb(var(--v-theme-surface));
   border-right: 1px solid rgba(49, 92, 114, 0.14);
 }
 .drawer-header {

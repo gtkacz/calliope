@@ -1,6 +1,6 @@
 import { requestJson } from '@/shared/api/client'
 
-import type { ReindexResponse, Workspace } from './types'
+import type { DirectoryListing, ReindexResponse, Workspace } from './types'
 
 export interface WorkspacePayload {
   name: string
@@ -43,4 +43,9 @@ export function reindexWorkspace(workspaceId: string): Promise<ReindexResponse> 
     method: 'POST',
     body: JSON.stringify({ workspace_id: workspaceId }),
   })
+}
+
+export function listDirectory(path?: string): Promise<DirectoryListing> {
+  const query = path ? `?path=${encodeURIComponent(path)}` : ''
+  return requestJson(`/v1/filesystem/list${query}`)
 }

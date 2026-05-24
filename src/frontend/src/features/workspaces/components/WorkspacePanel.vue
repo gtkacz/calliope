@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from 'vue'
 
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { Workspace } from '../types'
+import FolderPickerDialog from './FolderPickerDialog.vue'
 
 interface WorkspaceForm {
   name: string
@@ -13,6 +14,7 @@ interface WorkspaceForm {
 
 const store = useWorkspaceStore()
 const editingId = ref<string | null>(null)
+const pickerOpen = ref(false)
 const form = reactive<WorkspaceForm>({
   name: '',
   root_path: '',
@@ -97,7 +99,23 @@ async function save() {
 
       <div class="panel-field">
         <label class="calliope-eyebrow panel-field__label">Workspace root</label>
-        <v-text-field v-model="form.root_path" placeholder="/notes" />
+        <div class="workspace-root">
+          <span
+            class="workspace-root__path calliope-mono"
+            :class="{ 'workspace-root__path--empty': !form.root_path }"
+            :title="form.root_path || 'Choose a folder…'"
+          >
+            {{ form.root_path || 'Choose a folder…' }}
+          </span>
+          <button
+            type="button"
+            class="workspace-root__browse"
+            @click="pickerOpen = true"
+          >
+            <v-icon icon="mdi-folder-search-outline" size="16" />
+            <span>Browse</span>
+          </button>
+        </div>
         <span class="panel-field__hint">
           Absolute path visible to the backend container. See
           <span class="calliope-mono">CALLIOPE_NOTES_DIR</span> in
@@ -139,5 +157,70 @@ async function save() {
         </v-btn>
       </div>
     </form>
+
+    <FolderPickerDialog
+      v-model="pickerOpen"
+      :initial-path="form.root_path"
+      @select="(path) => (form.root_path = path)"
+    />
   </div>
 </template>
+
+<style scoped>
+.workspace-root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  background: var(--calliope-ink);
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-sm);
+  transition: border-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.workspace-root:hover,
+.workspace-root:focus-within {
+  border-color: var(--calliope-border-strong);
+}
+
+.workspace-root__path {
+  font-size: 0.82rem;
+  color: var(--calliope-paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  unicode-bidi: plaintext;
+  direction: rtl;
+  text-align: left;
+}
+
+.workspace-root__path--empty {
+  color: var(--calliope-paper-dim);
+  direction: ltr;
+}
+
+.workspace-root__browse {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  background: transparent;
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-xs);
+  color: var(--calliope-paper-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color var(--calliope-duration-fast) var(--calliope-ease-out),
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.workspace-root__browse:hover {
+  color: var(--calliope-bronze);
+  border-color: var(--calliope-bronze);
+  background: var(--calliope-bronze-veil);
+}
+</style>

@@ -1,5 +1,13 @@
 from calliope.api.errors import register_error_handlers
-from calliope.api.routes import chat, documents, profiles, search, sessions, workspaces
+from calliope.api.routes import (
+    chat,
+    documents,
+    filesystem,
+    profiles,
+    search,
+    sessions,
+    workspaces,
+)
 from calliope.config import Settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(sessions.router)
+    app.include_router(filesystem.router)
     register_error_handlers(app)
     app.state.settings = resolved_settings
     return app

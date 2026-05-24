@@ -107,8 +107,8 @@ onMounted(syncIndicator)
 
 <style scoped>
 .settings-shell {
-  background: var(--calliope-ink-top);
-  border: 1px solid var(--calliope-border-strong);
+  background: var(--calliope-ink-raised);
+  border: 1px solid rgba(239, 231, 214, 0.28);
   border-radius: var(--calliope-radius-lg);
   box-shadow: var(--calliope-shadow-lift);
   display: flex;
@@ -123,7 +123,7 @@ onMounted(syncIndicator)
   justify-content: space-between;
   gap: 1rem;
   padding: 1.5rem 2rem 1.1rem;
-  border-bottom: 1px solid var(--calliope-border-strong);
+  border-bottom: 1px solid rgba(239, 231, 214, 0.28);
 }
 
 .settings-header__meta {
@@ -169,7 +169,7 @@ onMounted(syncIndicator)
   display: flex;
   gap: 0.4rem;
   padding: 0 2rem;
-  border-bottom: 1px solid var(--calliope-border-strong);
+  border-bottom: 1px solid rgba(239, 231, 214, 0.28);
 }
 
 .settings-tab {
@@ -214,6 +214,62 @@ onMounted(syncIndicator)
 .settings-body {
   padding: 1.5rem 2rem 2rem;
   overflow-y: auto;
+  background: var(--calliope-ink-raised);
+}
+
+/* Scoped input-well treatment.
+ * The plain Vuetify variant reads as a thin underline; on a dense settings form
+ * that underline is not enough to delimit fields. Inside the settings body only,
+ * wrap each field in a recessed ink-soft well with a stronger underline so the
+ * eight-or-so inputs parse as discrete affordances without abandoning the
+ * editorial restraint of the rest of the dialog. */
+.settings-body :deep(.v-field) {
+  background: var(--calliope-ink-soft);
+  border-radius: var(--calliope-radius-md);
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.settings-body :deep(.v-field--variant-plain .v-field__outline::before) {
+  border-color: rgba(239, 231, 214, 0.32);
+  opacity: 1;
+}
+
+.settings-body :deep(.v-field:hover) {
+  background: var(--calliope-ink);
+}
+
+.settings-body :deep(.v-field--focused) {
+  background: var(--calliope-ink);
+  box-shadow: 0 0 0 1px var(--calliope-bronze-glow);
+}
+
+.settings-body :deep(.v-field--variant-plain.v-field--focused .v-field__outline::before) {
+  border-color: var(--calliope-bronze);
+  opacity: 1;
+}
+
+.settings-body :deep(.v-field__input) {
+  padding-inline: 0.85rem;
+  padding-block: 0.55rem;
+  min-height: 38px;
+}
+
+/* Combobox chips: the dim-on-dim treatment loses contrast when the field is
+ * recessed. Lift the chip surface and tighten its border for legibility. */
+.settings-body :deep(.v-chip.v-chip--variant-tonal) {
   background: var(--calliope-ink-top);
+  color: var(--calliope-paper);
+  border: 1px solid rgba(239, 231, 214, 0.16);
+}
+
+.settings-body :deep(.v-chip__close) {
+  color: var(--calliope-paper-muted);
+  opacity: 1;
+}
+
+.settings-body :deep(.v-chip__close:hover) {
+  color: var(--calliope-paper);
 }
 </style>

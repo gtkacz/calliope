@@ -28,6 +28,19 @@ class WorkspaceRead(WorkspaceCreate):
     created_at: datetime
 
 
+class DirectoryEntry(BaseModel):
+    name: str
+    path: str
+    is_dir: bool
+    is_hidden: bool
+
+
+class DirectoryListing(BaseModel):
+    path: str
+    parent: str | None
+    entries: list[DirectoryEntry]
+
+
 class ProfileCreate(BaseModel):
     name: str
     kind: ProfileKind = ProfileKind.OPENAI_COMPATIBLE

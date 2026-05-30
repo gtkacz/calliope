@@ -41,14 +41,23 @@ services:
     environment:
       CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
       CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
+      # Folder the in-app picker opens on; it can only browse paths that are
+      # bind-mounted in (see the volume below). Keep it in sync with the mount.
+      CALLIOPE_BROWSE_ROOT: ${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}
     ports:
       - "${BACKEND_HOST_PORT:-8000}:8000"
     volumes:
-      - "${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:ro"
+      # Mounted read-WRITE so in-app edits (LLM appends/overwrites to markdown files)
+      # persist back to host files via the filesystem write API.
+      - "${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}:${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}:rw"
       - ./src/backend:/app/src/backend:z
       - ./alembic:/app/alembic:z
       - ./alembic.ini:/app/alembic.ini:z,ro
       - ./pyproject.toml:/app/pyproject.toml:z,ro
+    # See docker-compose.yml: read the browse-root bind mount under enforcing
+    # SELinux without relabeling the host tree (":z"/":Z" would mangle $HOME).
+    security_opt:
+      - label=disable
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command:

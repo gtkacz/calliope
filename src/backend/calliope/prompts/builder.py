@@ -1,5 +1,5 @@
-from calliope.domain.enums import CanonPolicy
-from calliope.domain.schemas import SourceReference
+from calliope.domain.enums import CanonPolicy, EditMode
+from calliope.domain.schemas import CitedDocument, SourceReference
 
 POLICY_TEXT: dict[CanonPolicy, str] = {
     CanonPolicy.STRICT_CANON: (
@@ -22,10 +22,19 @@ def build_chat_messages(
     message: str,
     policy: CanonPolicy,
     sources: list[SourceReference],
+    cited_documents: list[CitedDocument] | None = None,
 ) -> list[dict[str, str]]:
     source_blocks = "\n\n".join(_format_source(source) for source in sources)
     if not source_blocks:
         source_blocks = "No indexed canon sources were retrieved."
+
+    user_parts: list[str] = [f"Question:\n{message}"]
+
+    if cited_documents:
+        cited_blocks = "\n\n".join(_format_cited_document(doc) for doc in cited_documents)
+        user_parts.append(f"User-cited canon (treat as authoritative):\n{cited_blocks}")
+
+    user_parts.append(f"Indexed canon sources:\n{source_blocks}")
 
     return [
         {
@@ -38,10 +47,43 @@ def build_chat_messages(
         },
         {
             "role": "user",
-            "content": (f"Question:\n{message}\n\nIndexed canon sources:\n{source_blocks}"),
+            "content": "\n\n".join(user_parts),
+        },
+    ]
+
+
+def build_document_edit_messages(
+    *,
+    content: str,
+    instruction: str,
+    mode: EditMode,
+) -> list[dict[str, str]]:
+    if mode is EditMode.APPEND:
+        mode_instruction = (
+            "Return ONLY the new markdown to append (do not repeat existing content)."
+        )
+    else:
+        mode_instruction = "Return the COMPLETE revised markdown document."
+
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are Calliope, an editor for markdown documents.\n"
+                f"{mode_instruction}\n"
+                "Return ONLY the resulting markdown with NO commentary and NO code fences."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (f"Instruction:\n{instruction}\n\nCurrent document:\n<<<\n{content}\n>>>"),
         },
     ]
 
 
 def _format_source(source: SourceReference) -> str:
     return f"Path: {source.path}\nHeading: {source.heading}\nExcerpt: {source.excerpt}"
+
+
+def _format_cited_document(doc: CitedDocument) -> str:
+    return f"Path: {doc.path}\nTitle: {doc.title}\nContent:\n{doc.content}"

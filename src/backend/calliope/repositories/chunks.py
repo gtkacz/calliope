@@ -56,5 +56,11 @@ class ChunkRepository:
             score=score,
         )
 
+    def text_for_document(self, document_id: str) -> str:
+        chunks = self.session.scalars(
+            select(Chunk).where(Chunk.document_id == document_id).order_by(Chunk.chunk_index)
+        ).all()
+        return "\n\n".join(chunk.text for chunk in chunks)
+
     def count(self) -> int:
         return self.session.scalar(select(func.count()).select_from(Chunk)) or 0

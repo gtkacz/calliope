@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from calliope.domain.enums import CanonPolicy, ProfileCapability, ProfileKind
+from calliope.domain.enums import CanonPolicy, EditMode, ProfileCapability, ProfileKind
 from pydantic import BaseModel, Field
 
 
@@ -39,6 +39,16 @@ class DirectoryListing(BaseModel):
     path: str
     parent: str | None
     entries: list[DirectoryEntry]
+
+
+class FileContent(BaseModel):
+    path: str
+    content: str
+
+
+class FileWriteRequest(BaseModel):
+    path: str
+    content: str
 
 
 class ProfileCreate(BaseModel):
@@ -103,6 +113,28 @@ class ChatRequest(BaseModel):
     workspace_id: str | None = None
     chat_profile_id: str | None = None
     limit: int = Field(default=8, ge=1, le=50)
+    cited_document_ids: list[str] = Field(default_factory=list)
+
+
+class CitedDocument(BaseModel):
+    document_id: str
+    path: str
+    title: str
+    content: str
+
+
+class EditProposalRequest(BaseModel):
+    path: str
+    instruction: str
+    mode: EditMode = EditMode.APPEND
+    chat_profile_id: str | None = None
+
+
+class EditProposal(BaseModel):
+    path: str
+    mode: EditMode
+    original_content: str
+    proposed_content: str
 
 
 class DocumentRead(BaseModel):

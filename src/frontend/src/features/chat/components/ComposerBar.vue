@@ -1,80 +1,216 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { Motion } from 'motion-v'
+import { computed, ref } from "vue";
+import { Motion } from "motion-v";
 
-import type { CanonPolicy, ComposerMode } from '../types'
-import type { Profile } from '@/features/profiles/types'
-import type { Workspace } from '@/features/workspaces/types'
+import type { CanonPolicy, ComposerMode } from "../types";
+import type { Profile } from "@/features/profiles/types";
+import type { Workspace } from "@/features/workspaces/types";
+import type { DocumentSummary } from "@/features/documents/types";
+import { useChatStore } from "../stores/chatStore";
+import MentionMenu from "./MentionMenu.vue";
 
 const props = defineProps<{
-  mode: ComposerMode
-  policy: CanonPolicy
-  selectedWorkspaceId: string | null
-  selectedChatProfileId: string | null
-  workspaces: Workspace[]
-  profiles: Profile[]
-  pending: boolean
-  disabled: boolean
-}>()
+  mode: ComposerMode;
+  policy: CanonPolicy;
+  selectedWorkspaceId: string | null;
+  selectedChatProfileId: string | null;
+  workspaces: Workspace[];
+  profiles: Profile[];
+  pending: boolean;
+  disabled: boolean;
+}>();
 
 const emit = defineEmits<{
-  'update:mode': [value: ComposerMode]
-  'update:policy': [value: CanonPolicy]
-  'update:selectedWorkspaceId': [value: string | null]
-  'update:selectedChatProfileId': [value: string | null]
-  submit: [value: string]
-}>()
+  "update:mode": [value: ComposerMode];
+  "update:policy": [value: CanonPolicy];
+  "update:selectedWorkspaceId": [value: string | null];
+  "update:selectedChatProfileId": [value: string | null];
+  submit: [value: string];
+}>();
 
-const text = ref('')
-const focused = ref(false)
+const chat = useChatStore();
+
+const text = ref("");
+const focused = ref(false);
+const mentionMenuRef = ref<InstanceType<typeof MentionMenu> | null>(null);
+
+// Track whether documents have been loaded for the current open of the mention menu
+let mentionDocumentsLoaded = false;
+
+// The active @token start position in the textarea, or -1 when no mention is open
+const activeMentionStart = ref(-1);
+
+const mentionQuery = computed(() => {
+  if (activeMentionStart.value === -1) return "";
+  // Slice from the character after '@' to end; the menu component does its own filtering
+  return text.value.slice(activeMentionStart.value + 1);
+});
+
+const mentionOpen = computed(() => activeMentionStart.value !== -1);
 
 const policyItems = [
-  { value: 'strict_canon', title: 'Strict canon' },
-  { value: 'canon_plus_inference', title: 'Canon + inference' },
-  { value: 'creative_but_consistent', title: 'Creative, consistent' },
-]
+  { value: "strict_canon", title: "Strict canon" },
+  { value: "canon_plus_inference", title: "Canon + inference" },
+  { value: "creative_but_consistent", title: "Creative, consistent" },
+];
 
 const disabledReason = computed(() => {
-  if (props.pending) return 'Waiting for response'
-  if (props.workspaces.length === 0) return 'Workspace required'
-  if (props.mode === 'chat' && props.profiles.length === 0) return 'Chat profile required'
-  return null
-})
+  if (props.pending) return "Waiting for response";
+  if (props.workspaces.length === 0) return "Workspace required";
+  if (props.mode === "chat" && props.profiles.length === 0)
+    return "Chat profile required";
+  return null;
+});
 
-const canSubmit = computed(() => !props.disabled && text.value.trim().length > 0)
+const canSubmit = computed(
+  () => !props.disabled && text.value.trim().length > 0,
+);
+
+const citedDocs = computed<DocumentSummary[]>(() =>
+  chat.citedDocumentIds
+    .map((id) => chat.mentionDocuments.find((d) => d.id === id))
+    .filter((d): d is DocumentSummary => d !== undefined),
+);
+
+function detectMention(caretPos: number) {
+  // Walk backwards from the caret to find an uninterrupted @word token
+  const before = text.value.slice(0, caretPos);
+  const match = /(?:^|[\s\n])(@\S*)$/.exec(before);
+  if (match !== null) {
+    // The '@' position within the full text
+    activeMentionStart.value = caretPos - match[1].length;
+  } else {
+    activeMentionStart.value = -1;
+    mentionDocumentsLoaded = false;
+  }
+}
+
+function onInput(event: Event) {
+  const target = event.target as HTMLTextAreaElement;
+  detectMention(target.selectionStart ?? text.value.length);
+  if (mentionOpen.value && !mentionDocumentsLoaded) {
+    mentionDocumentsLoaded = true;
+    chat.loadMentionDocuments();
+  }
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (mentionOpen.value) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      mentionMenuRef.value?.moveHighlight(1);
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      mentionMenuRef.value?.moveHighlight(-1);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      mentionMenuRef.value?.selectHighlighted();
+      return;
+    }
+    if (event.key === "Escape") {
+      activeMentionStart.value = -1;
+      mentionDocumentsLoaded = false;
+      return;
+    }
+  }
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    submit();
+  }
+}
+
+function onSelectMention(doc: DocumentSummary) {
+  // Replace the active @token with the full @<path> and a trailing space
+  const before = text.value.slice(0, activeMentionStart.value);
+  const after = text.value.slice(
+    activeMentionStart.value + 1 + mentionQuery.value.length,
+  );
+  text.value = `${before}@${doc.path} ${after}`;
+  activeMentionStart.value = -1;
+  mentionDocumentsLoaded = false;
+
+  // Dedup before pushing
+  if (!chat.citedDocumentIds.includes(doc.id)) {
+    chat.citedDocumentIds = [...chat.citedDocumentIds, doc.id];
+  }
+}
+
+function removeCitation(id: string) {
+  chat.citedDocumentIds = chat.citedDocumentIds.filter(
+    (existing) => existing !== id,
+  );
+}
 
 function submit() {
-  const value = text.value.trim()
-  if (value.length === 0 || props.disabled) return
-  emit('submit', value)
-  text.value = ''
+  const value = text.value.trim();
+  if (value.length === 0 || props.disabled) return;
+  emit("submit", value);
+  text.value = "";
+  activeMentionStart.value = -1;
+  mentionDocumentsLoaded = false;
 }
 
 function setMode(next: ComposerMode) {
-  if (next === props.mode) return
-  emit('update:mode', next)
+  if (next === props.mode) return;
+  emit("update:mode", next);
 }
 </script>
 
 <template>
   <div class="composer-wrap">
     <div class="composer" :class="{ 'is-focused': focused }">
-      <v-textarea
-        v-model="text"
-        rows="1"
-        auto-grow
-        variant="plain"
-        density="comfortable"
-        hide-details
-        placeholder="Ask Calliope, or search your notes…"
-        class="composer__input"
-        @focus="focused = true"
-        @blur="focused = false"
-        @keydown.enter.exact.prevent="submit"
-      />
+      <div v-if="citedDocs.length > 0" class="composer__citations">
+        <span
+          v-for="doc in citedDocs"
+          :key="doc.id"
+          class="composer__citation calliope-mono"
+        >
+          @{{ doc.title || doc.path }}
+          <button
+            type="button"
+            class="composer__citation-remove"
+            :aria-label="`Remove citation ${doc.title || doc.path}`"
+            @click="removeCitation(doc.id)"
+          >
+            ×
+          </button>
+        </span>
+      </div>
+
+      <div class="composer__input-wrap">
+        <MentionMenu
+          v-if="mentionOpen"
+          ref="mentionMenuRef"
+          :documents="chat.mentionDocuments"
+          :query="mentionQuery"
+          @select="onSelectMention"
+        />
+        <v-textarea
+          v-model="text"
+          rows="1"
+          auto-grow
+          variant="plain"
+          density="comfortable"
+          hide-details
+          placeholder="Ask Calliope, or search your notes…"
+          class="composer__input"
+          @focus="focused = true"
+          @blur="focused = false"
+          @input="onInput"
+          @keydown="onKeydown"
+        />
+      </div>
 
       <div class="composer__controls">
-        <div class="composer__segmented" role="tablist" aria-label="Composer mode">
+        <div
+          class="composer__segmented"
+          role="tablist"
+          aria-label="Composer mode"
+        >
           <button
             type="button"
             class="composer__segment"
@@ -276,7 +412,8 @@ function setMode(next: ComposerMode) {
   border: 1px solid var(--calliope-border);
   border-radius: var(--calliope-radius-pill);
   min-height: 28px;
-  transition: border-color var(--calliope-duration-fast) var(--calliope-ease-out);
+  transition: border-color var(--calliope-duration-fast)
+    var(--calliope-ease-out);
 }
 
 .composer__pill :deep(.v-field:hover),
@@ -368,6 +505,51 @@ function setMode(next: ComposerMode) {
   color: var(--calliope-paper-dim);
   font-size: 0.7rem;
   letter-spacing: 0.06em;
+}
+
+.composer__input-wrap {
+  position: relative;
+}
+
+.composer__citations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--calliope-border);
+}
+
+.composer__citation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.18rem 0.55rem;
+  background: var(--calliope-bronze-veil);
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-pill);
+  font-family: var(--calliope-font-mono);
+  font-size: 0.7rem;
+  color: var(--calliope-bronze);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.composer__citation-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--calliope-paper-dim);
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0;
+  transition: color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.composer__citation-remove:hover {
+  color: var(--calliope-paper);
 }
 
 @media (max-width: 900px) {

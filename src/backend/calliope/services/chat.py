@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from calliope.domain.schemas import ChatRequest, ChatResponse, SearchRequest
+from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
 from calliope.prompts.builder import build_chat_messages
 from calliope.repositories.chats import ChatRepository
+from calliope.repositories.chunks import ChunkRepository
+from calliope.repositories.documents import DocumentRepository
 from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner, aclose_client
 from calliope.services.search import SearchService
 from sqlalchemy.orm import Session
@@ -59,10 +61,31 @@ class ChatService:
             if "search_response" in locals():
                 search_service.close()
 
+        chunk_repo = ChunkRepository(self.session)
+        doc_repo = DocumentRepository(self.session)
+        cited_documents: list[CitedDocument] = []
+        for doc_id in request.cited_document_ids:
+            try:
+                doc = doc_repo.get(doc_id)
+            except Exception:
+                continue
+            # Silently skip documents from other workspaces to prevent data leakage.
+            if request.workspace_id is not None and doc.workspace_id != request.workspace_id:
+                continue
+            cited_documents.append(
+                CitedDocument(
+                    document_id=doc.id,
+                    path=doc.path,
+                    title=doc.title,
+                    content=chunk_repo.text_for_document(doc.id),
+                )
+            )
+
         messages = build_chat_messages(
             message=request.message,
             policy=request.policy,
             sources=search_response.sources,
+            cited_documents=cited_documents or None,
         )
         answer = self._async_runner.run(self.chat_client.chat(messages))
 
@@ -90,6 +113,8 @@ class ChatService:
                     "sources": [
                         source.model_dump(mode="json") for source in search_response.sources
                     ],
+                    "cited_document_ids": [doc.document_id for doc in cited_documents],
+                    "cited_paths": [doc.path for doc in cited_documents],
                 },
             )
             trace = repository.add_trace(

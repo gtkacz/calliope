@@ -1,69 +1,84 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from "vue";
 
-import { apiBaseUrl } from '@/shared/api/client'
-import { useChatStore } from '../stores/chatStore'
-import { useProfileStore } from '@/features/profiles/stores/profileStore'
-import { useSettingsStore } from '@/features/settings/stores/settingsStore'
-import { useWorkspaceStore } from '@/features/workspaces/stores/workspaceStore'
-import SettingsDialog from '@/features/settings/components/SettingsDialog.vue'
-import ComposerBar from './ComposerBar.vue'
-import ConversationDrawer from './ConversationDrawer.vue'
-import ConversationTimeline from './ConversationTimeline.vue'
+import { apiBaseUrl } from "@/shared/api/client";
+import { useChatStore } from "../stores/chatStore";
+import { useProfileStore } from "@/features/profiles/stores/profileStore";
+import { useSettingsStore } from "@/features/settings/stores/settingsStore";
+import { useWorkspaceStore } from "@/features/workspaces/stores/workspaceStore";
+import EditorPanel from "@/features/editor/components/EditorPanel.vue";
+import SettingsDialog from "@/features/settings/components/SettingsDialog.vue";
+import ComposerBar from "./ComposerBar.vue";
+import ConversationDrawer from "./ConversationDrawer.vue";
+import ConversationTimeline from "./ConversationTimeline.vue";
 
-const chat = useChatStore()
-const profile = useProfileStore()
-const settings = useSettingsStore()
-const workspace = useWorkspaceStore()
+const chat = useChatStore();
+const profile = useProfileStore();
+const settings = useSettingsStore();
+const workspace = useWorkspaceStore();
 
-const startupError = ref(false)
-const startupLoading = ref(false)
-const apiBaseUrlValue = apiBaseUrl()
+const startupError = ref(false);
+const startupLoading = ref(false);
+const apiBaseUrlValue = apiBaseUrl();
+const editorOpen = ref(false);
 
 const activeWorkspaceName = computed(() => {
-  const id = chat.selectedWorkspaceId
-  if (id === null) return 'No workspace selected'
-  return workspace.workspaces.find((w) => w.id === id)?.name ?? 'No workspace selected'
-})
+  const id = chat.selectedWorkspaceId;
+  if (id === null) return "No workspace selected";
+  return (
+    workspace.workspaces.find((w) => w.id === id)?.name ??
+    "No workspace selected"
+  );
+});
 
 const activeProfileName = computed(() => {
-  if (chat.selectedChatProfileId === null) return null
-  return profile.chatProfiles.find((p) => p.id === chat.selectedChatProfileId)?.name ?? null
-})
+  if (chat.selectedChatProfileId === null) return null;
+  return (
+    profile.chatProfiles.find((p) => p.id === chat.selectedChatProfileId)
+      ?.name ?? null
+  );
+});
 
 const needsWorkspace = computed(
   () => !startupError.value && workspace.workspaces.length === 0,
-)
+);
 const needsProfile = computed(
-  () => !startupError.value && !needsWorkspace.value && profile.chatProfiles.length === 0,
-)
+  () =>
+    !startupError.value &&
+    !needsWorkspace.value &&
+    profile.chatProfiles.length === 0,
+);
 
 function startNewConversation() {
-  chat.activeSessionId = null
-  chat.messages = []
+  chat.activeSessionId = null;
+  chat.messages = [];
 }
 
 async function loadInitialData() {
-  if (startupLoading.value) return
-  startupLoading.value = true
-  startupError.value = false
+  if (startupLoading.value) return;
+  startupLoading.value = true;
+  startupError.value = false;
   try {
-    await Promise.all([workspace.refresh(), profile.refresh(), chat.refreshConversationList()])
+    await Promise.all([
+      workspace.refresh(),
+      profile.refresh(),
+      chat.refreshConversationList(),
+    ]);
   } catch {
-    startupError.value = true
-    return
+    startupError.value = true;
+    return;
   } finally {
-    startupLoading.value = false
+    startupLoading.value = false;
   }
   if (chat.selectedWorkspaceId === null && workspace.workspaces.length > 0) {
-    chat.selectedWorkspaceId = workspace.workspaces[0].id
+    chat.selectedWorkspaceId = workspace.workspaces[0].id;
   }
   if (chat.selectedChatProfileId === null && profile.chatProfiles.length > 0) {
-    chat.selectedChatProfileId = profile.chatProfiles[0].id
+    chat.selectedChatProfileId = profile.chatProfiles[0].id;
   }
 }
 
-onMounted(loadInitialData)
+onMounted(loadInitialData);
 </script>
 
 <template>
@@ -81,13 +96,27 @@ onMounted(loadInitialData)
       <header class="chat-context">
         <div class="chat-context__meta">
           <span class="calliope-eyebrow">Workspace</span>
-          <span class="chat-context__title calliope-serif">{{ activeWorkspaceName }}</span>
+          <span class="chat-context__title calliope-serif">{{
+            activeWorkspaceName
+          }}</span>
         </div>
         <div class="chat-context__actions">
-          <span v-if="activeProfileName" class="chat-context__profile calliope-mono">
+          <span
+            v-if="activeProfileName"
+            class="chat-context__profile calliope-mono"
+          >
             <span class="chat-context__profile-dot" aria-hidden="true">●</span>
             {{ activeProfileName }}
           </span>
+          <v-btn
+            icon="mdi-file-document-edit-outline"
+            variant="text"
+            size="small"
+            density="comfortable"
+            color="default"
+            aria-label="Edit a file"
+            @click="editorOpen = true"
+          />
           <v-btn
             class="chat-context__settings"
             icon="mdi-cog-outline"
@@ -108,7 +137,8 @@ onMounted(loadInitialData)
             Calliope can&rsquo;t reach the backend.
           </h1>
           <p class="chat-fallback__detail">
-            Tried <span class="calliope-mono">{{ apiBaseUrlValue }}</span> but received no response.
+            Tried <span class="calliope-mono">{{ apiBaseUrlValue }}</span> but
+            received no response.
           </p>
           <div class="chat-fallback__action">
             <v-btn
@@ -147,18 +177,31 @@ onMounted(loadInitialData)
         <span class="calliope-eyebrow chat-hint__label">Setup</span>
         <span v-if="needsWorkspace">
           Create or select a workspace in
-          <button type="button" class="chat-hint__link" @click="settings.show()">Settings</button>
+          <button
+            type="button"
+            class="chat-hint__link"
+            @click="settings.show()"
+          >
+            Settings
+          </button>
           before submitting turns.
         </span>
         <span v-else-if="needsProfile">
           Create a chat-capable profile in
-          <button type="button" class="chat-hint__link" @click="settings.show()">Settings</button>
+          <button
+            type="button"
+            class="chat-hint__link"
+            @click="settings.show()"
+          >
+            Settings
+          </button>
           before using Chat mode.
         </span>
       </footer>
     </section>
 
     <SettingsDialog />
+    <EditorPanel v-model:open="editorOpen" />
   </div>
 </template>
 
@@ -299,7 +342,8 @@ onMounted(loadInitialData)
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
   text-decoration-color: var(--calliope-bronze-glow);
-  transition: text-decoration-color var(--calliope-duration-fast) var(--calliope-ease-out);
+  transition: text-decoration-color var(--calliope-duration-fast)
+    var(--calliope-ease-out);
 }
 
 .chat-hint__link:hover {

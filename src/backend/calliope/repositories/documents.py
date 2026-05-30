@@ -54,11 +54,11 @@ class DocumentRepository:
         self.session.flush()
         return document
 
-    def list(self) -> list[DocumentRead]:
-        documents = self.session.scalars(
-            select(Document).where(Document.deleted_at.is_(None)).order_by(Document.path)
-        ).all()
-
+    def list(self, workspace_id: str | None = None) -> list[DocumentRead]:
+        statement = select(Document).where(Document.deleted_at.is_(None)).order_by(Document.path)
+        if workspace_id is not None:
+            statement = statement.where(Document.workspace_id == workspace_id)
+        documents = self.session.scalars(statement).all()
         return [self._to_read(document) for document in documents]
 
     def get(self, document_id: str) -> DocumentRead:

@@ -34,14 +34,27 @@ services:
     environment:
       CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
       CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
+      # Folder the in-app picker opens on; it can only browse paths that are
+      # bind-mounted in (see the volume below). Keep it in sync with the mount.
+      CALLIOPE_BROWSE_ROOT: ${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}
     ports:
       - "${BACKEND_HOST_PORT:-8000}:8000"
     # Symmetric bind mount so absolute paths pasted into the UI's "Workspace
-    # root" field resolve to the same path inside the container. Override
-    # CALLIOPE_NOTES_DIR in .env to expose your real notes directory.
+    # root" field resolve to the same path inside the container. Set
+    # CALLIOPE_BROWSE_ROOT to the host directory you want to reach — e.g.
+    # `CALLIOPE_BROWSE_ROOT="$HOME" docker compose up` to browse your whole home.
     # The default lives under /var/tmp so rootless podman can auto-create it.
+    # Mounted read-WRITE so in-app edits (LLM appends/overwrites to markdown files)
+    # persist back to host files via the filesystem write API.
     volumes:
-      - "${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:${CALLIOPE_NOTES_DIR:-/var/tmp/calliope-notes}:ro"
+      - "${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}:${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}:rw"
+    # Read the bind mount under enforcing SELinux (Fedora) without relabeling the
+    # host tree. The ":z"/":Z" suffixes would relabel the mounted directory to
+    # container_file_t — fine for a dedicated dir, but destructive when
+    # CALLIOPE_BROWSE_ROOT points at your home. Disabling the label confines by
+    # Unix permissions only, mutating nothing on the host.
+    security_opt:
+      - label=disable
     # host.docker.internal lets the backend reach OpenAI-compatible services
     # (Ollama, etc.) running on the host. Podman provides host.containers.internal
     # natively; this mapping keeps profile URLs portable across both engines.

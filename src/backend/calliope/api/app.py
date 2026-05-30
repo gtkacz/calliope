@@ -2,6 +2,7 @@ from calliope.api.errors import register_error_handlers
 from calliope.api.routes import (
     chat,
     documents,
+    editor,
     filesystem,
     profiles,
     search,
@@ -30,6 +31,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(documents.router)
     app.include_router(sessions.router)
     app.include_router(filesystem.router)
+    app.include_router(editor.router)
     register_error_handlers(app)
     app.state.settings = resolved_settings
     return app

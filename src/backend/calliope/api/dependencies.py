@@ -12,8 +12,12 @@ from fastapi import Depends, Request
 from sqlalchemy.orm import Session
 
 
+def get_settings(request: Request) -> Settings:
+    return getattr(request.app.state, "settings", None) or Settings()
+
+
 def get_db_session(request: Request) -> Iterator[Session]:
-    settings = getattr(request.app.state, "settings", None) or Settings()
+    settings = get_settings(request)
     factory = create_session_factory(settings.database_url)
     with factory() as session:
         yield session

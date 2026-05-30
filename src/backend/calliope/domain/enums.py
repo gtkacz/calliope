@@ -16,3 +16,8 @@ class ProfileCapability(StrEnum):
     EMBEDDINGS = "embeddings"
     RERANK = "rerank"
     STREAMING = "streaming"
+
+
+class EditMode(StrEnum):
+    APPEND = "append"
+    REWRITE = "rewrite"

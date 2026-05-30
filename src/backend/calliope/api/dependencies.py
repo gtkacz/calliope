@@ -33,10 +33,7 @@ def api_key_for(profile: ProfileRead) -> str | None:
 def get_embedding_client(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> OpenAICompatibleClient:
-    profile = ProfileService(session).require_capability(
-        "default-embeddings",
-        ProfileCapability.EMBEDDINGS,
-    )
+    profile = ProfileService(session).require_default_capability(ProfileCapability.EMBEDDINGS)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
@@ -47,10 +44,7 @@ def get_embedding_client(
 def get_chat_client(
     session: Annotated[Session, Depends(get_db_session)],
 ) -> OpenAICompatibleClient:
-    profile = ProfileService(session).require_capability(
-        "default-chat",
-        ProfileCapability.CHAT,
-    )
+    profile = ProfileService(session).require_default_capability(ProfileCapability.CHAT)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,

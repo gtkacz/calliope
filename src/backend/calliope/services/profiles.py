@@ -27,6 +27,26 @@ class ProfileService:
     def delete(self, profile_id: str) -> None:
         self.repository.delete(profile_id)
 
+    def require_default_capability(self, capability: ProfileCapability) -> ProfileRead:
+        """Resolve the profile to use when the caller did not name one explicitly.
+
+        The webapp names profiles freely and signals intent only through capability
+        flags, so the default for a capability is the oldest profile that advertises
+        it rather than a profile carrying a magic name."""
+        for profile in self.repository.list():
+            if capability in profile.capabilities:
+                return profile
+
+        raise AppError(
+            code="connection_profile_not_found",
+            message=(
+                f"No connection profile has the {capability.value!r} capability. "
+                f"Create one under Settings → LLM Profiles and enable {capability.value!r}."
+            ),
+            status_code=404,
+            details={"capability": capability.value},
+        )
+
     def require_capability(self, name: str, capability: ProfileCapability) -> ProfileRead:
         profile = self.get_by_name(name)
         if capability not in profile.capabilities:

@@ -49,10 +49,9 @@ def api_key_for(api_key_ref: str | None) -> str | None:
 
 def profile_client(
     session: Session,
-    name: str,
     capability: ProfileCapability,
 ) -> OpenAICompatibleClient:
-    profile = ProfileService(session).require_capability(name, capability)
+    profile = ProfileService(session).require_default_capability(capability)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
@@ -206,11 +205,7 @@ def reindex(workspace: Annotated[str | None, typer.Argument()] = None) -> None:
                 else [candidate.id for candidate in WorkspaceService(session).list()]
             )
             for workspace_id in workspace_ids:
-                embedding_client = profile_client(
-                    session,
-                    "default-embeddings",
-                    ProfileCapability.EMBEDDINGS,
-                )
+                embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
                 result = Reindexer(
                     session,
                     embedding_client=embedding_client,
@@ -232,11 +227,7 @@ def search(
     """Search indexed workspace content."""
     try:
         with session_scope() as session:
-            embedding_client = profile_client(
-                session,
-                "default-embeddings",
-                ProfileCapability.EMBEDDINGS,
-            )
+            embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
             service = SearchService(
                 session,
                 embedding_client,
@@ -273,13 +264,9 @@ def chat(
     """Ask a question against indexed content."""
     try:
         with session_scope() as session:
-            embedding_client = profile_client(
-                session,
-                "default-embeddings",
-                ProfileCapability.EMBEDDINGS,
-            )
+            embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
             try:
-                chat_client = profile_client(session, "default-chat", ProfileCapability.CHAT)
+                chat_client = profile_client(session, ProfileCapability.CHAT)
             except Exception:
                 close_client_suppress(embedding_client)
                 raise

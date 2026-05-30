@@ -31,6 +31,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    # Run as root so rootless podman maps the container to the HOST user, who owns
+    # the bind-mounted browse root (a 0700 home dir is unreadable to the image's
+    # unprivileged uid 10001). Under rootless podman "root" is your host user, not
+    # real root, so this grants no extra host privilege. Mirrors compose.dev.yml.
+    # Under Docker rootful this runs as real root; files written to the mount are
+    # then root-owned on the host — acceptable for this local-first tool.
+    user: root
     environment:
       CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
       CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}

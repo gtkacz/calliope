@@ -29,6 +29,16 @@ interface Crumb {
   path: string
 }
 
+// True when the picker is sitting on the configured browse root itself — an
+// empty listing here means the mounted directory is empty, not just a bare
+// subfolder, so we surface the CALLIOPE_BROWSE_ROOT setup hint.
+const atConfiguredRoot = computed<boolean>(
+  () =>
+    listing.value !== null &&
+    listing.value.browse_root !== null &&
+    listing.value.path === listing.value.browse_root,
+)
+
 const breadcrumbs = computed<Crumb[]>(() => {
   if (!listing.value) {
     return []
@@ -256,6 +266,15 @@ function onKeydown(event: KeyboardEvent): void {
             <v-icon icon="mdi-chevron-right" size="16" class="folder-picker__row-chev" />
           </li>
         </ul>
+
+        <div
+          v-else-if="listing && atConfiguredRoot"
+          class="folder-picker__empty folder-picker__empty--hint calliope-mono"
+        >
+          This is the only folder the backend can see, and it's empty. To browse
+          your own files, set <code>CALLIOPE_BROWSE_ROOT</code> to a host path
+          (e.g. your home directory) and restart.
+        </div>
 
         <div v-else-if="listing" class="folder-picker__empty calliope-mono">
           No subfolders here
@@ -559,6 +578,21 @@ function onKeydown(event: KeyboardEvent): void {
   font-size: 0.78rem;
   color: var(--calliope-paper-dim);
   letter-spacing: 0.04em;
+}
+
+.folder-picker__empty--hint {
+  max-width: 42ch;
+  margin: 0 auto;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+}
+
+.folder-picker__empty--hint code {
+  color: var(--calliope-bronze);
+  background: var(--calliope-bronze-veil);
+  padding: 0.05rem 0.3rem;
+  border-radius: var(--calliope-radius-xs);
 }
 
 .folder-picker__foot {

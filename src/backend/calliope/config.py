@@ -1,6 +1,13 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Native output width of the configured embedding model. This is the single
+# source of truth for the pgvector column width: the ORM column reads it and
+# the corresponding Alembic migration pins the same literal. Changing it
+# requires a migration that alters the `chunks.embedding` column and re-embeds
+# every document, because vectors of different widths are not comparable.
+EMBEDDING_DIMENSIONS = 1024
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CALLIOPE_", env_file=".env", extra="ignore")
@@ -15,7 +22,7 @@ class Settings(BaseSettings):
     # Off by default because enabling it writes a .calliope-git store into each
     # versioned workspace folder.
     versioning_enabled: bool = False
-    embedding_dimensions: int = Field(default=384, ge=1)
+    embedding_dimensions: int = Field(default=EMBEDDING_DIMENSIONS, ge=1)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )

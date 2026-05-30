@@ -19,7 +19,18 @@ class FilesystemService:
             path=str(target),
             parent=str(target.parent) if target.parent != target else None,
             entries=entries,
+            browse_root=self._resolved_browse_root(),
         )
+
+    def _resolved_browse_root(self) -> str | None:
+        """Canonical browse-root path, matching the form of listed paths so the
+        UI can detect when the picker is sitting on the configured root itself."""
+        if not self._browse_root:
+            return None
+        try:
+            return str(Path(self._browse_root).resolve(strict=True))
+        except OSError:
+            return None
 
     def read_file(self, raw_path: str | None) -> FileContent:
         if raw_path is None or raw_path.strip() == "":

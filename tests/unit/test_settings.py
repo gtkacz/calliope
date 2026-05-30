@@ -3,7 +3,7 @@ from typing import Any
 
 import pytest
 
-from calliope.config import Settings
+from calliope.config import EMBEDDING_DIMENSIONS, Settings
 
 
 def test_settings_defaults_are_local(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -16,7 +16,7 @@ def test_settings_defaults_are_local(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert settings.database_url.startswith("postgresql+psycopg://")
     assert settings.api_title == "Calliope"
-    assert settings.embedding_dimensions == 384
+    assert settings.embedding_dimensions == EMBEDDING_DIMENSIONS
 
 
 def test_calliope_env_is_cleared_before_settings_load() -> None:
@@ -25,4 +25,4 @@ def test_calliope_env_is_cleared_before_settings_load() -> None:
     settings_kwargs: dict[str, Any] = {"_env_file": None}
     settings = Settings(**settings_kwargs)
 
-    assert settings.embedding_dimensions == 384
+    assert settings.embedding_dimensions == EMBEDDING_DIMENSIONS

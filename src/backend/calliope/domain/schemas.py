@@ -48,6 +48,10 @@ class DirectoryListing(BaseModel):
     path: str
     parent: str | None
     entries: list[DirectoryEntry]
+    # The configured browse root (read/write confinement boundary and the
+    # picker's default open location), or None when unset. Lets the UI tell a
+    # genuinely-empty subfolder apart from an empty configured root.
+    browse_root: str | None = None
 
 
 class FileContent(BaseModel):

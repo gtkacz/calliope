@@ -16,6 +16,15 @@ Podman users on Fedora can substitute `podman compose up --build`. The frontend 
 
 Copy `.env.example` to `.env` to override any of the default host ports or the frontend's baked-in backend URL.
 
+**Point Calliope at your files.** A container can only see directories that are bind-mounted into it. By default `CALLIOPE_BROWSE_ROOT` is an empty scratch directory, so the in-app folder picker, indexer, and file editor start out seeing *nothing*. Set it to the host directory you want to browse and edit — your whole home, or a single notes tree — in `.env`:
+
+```bash
+CALLIOPE_BROWSE_ROOT=/home/youruser          # browse anything under your home
+# CALLIOPE_BROWSE_ROOT=/home/youruser/notes  # or restrict to a single tree
+```
+
+or inline for a one-off run: `CALLIOPE_BROWSE_ROOT="$HOME" docker compose up`. The directory is bind-mounted read-write at the same absolute path inside the container, so pasted absolute paths resolve verbatim and in-app edits persist back to the host. If the picker reports that it can only see one empty folder, this variable is unset or points at an empty directory.
+
 Run CLI commands inside the running backend container:
 
 ```bash

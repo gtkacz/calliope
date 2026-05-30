@@ -23,4 +23,5 @@ export interface DirectoryListing {
   path: string
   parent: string | null
   entries: DirectoryEntry[]
+  browse_root: string | null
 }

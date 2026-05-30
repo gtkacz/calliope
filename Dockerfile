@@ -8,13 +8,17 @@ ENV UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
 
 COPY pyproject.toml uv.lock README.md ./
-RUN --mount=type=cache,target=/root/.cache/uv \
+# sharing=locked serializes the cache mount: compose builds the `migrate` and
+# `backend` services from this same Dockerfile concurrently, and without the lock
+# both writers collide on the shared uv cache (Permission denied under rootless
+# podman). Locking makes the second build wait rather than race.
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
     uv sync --frozen --no-dev --no-install-project
 
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY src/backend ./src/backend
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
     uv sync --frozen --no-dev
 
 

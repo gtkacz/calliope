@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.db.base import Base
 from calliope.db.types import EmbeddingVector
 from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
@@ -74,7 +75,7 @@ class Chunk(Base):
     text: Mapped[str] = mapped_column(Text, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingVector(384))
+    embedding: Mapped[list[float] | None] = mapped_column(EmbeddingVector(EMBEDDING_DIMENSIONS))
     search_vector: Mapped[str | None] = mapped_column(TSVECTOR)
 
     document: Mapped[Document] = relationship(back_populates="chunks")

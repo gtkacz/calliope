@@ -1,3 +1,5 @@
+import logging
+
 from calliope.api.errors import register_error_handlers
 from calliope.api.routes import (
     chat,
@@ -10,12 +12,20 @@ from calliope.api.routes import (
     workspaces,
 )
 from calliope.config import Settings
+from calliope.services.versioning import VersioningService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or Settings()
+    if resolved_settings.versioning_enabled and not VersioningService.is_available():
+        logger.warning(
+            "CALLIOPE_VERSIONING_ENABLED is set but the 'git' binary was not found; "
+            "file version history will be inactive.",
+        )
     app = FastAPI(title=resolved_settings.api_title)
     app.add_middleware(
         CORSMiddleware,

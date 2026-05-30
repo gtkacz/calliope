@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from calliope.db.base import Base
 from calliope.db.types import EmbeddingVector
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -21,6 +21,9 @@ class Workspace(Base):
     root_path: Mapped[str] = mapped_column(Text, nullable=False)
     include_globs: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
     exclude_globs: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    # Nullable tri-state: NULL inherits the global CALLIOPE_VERSIONING_ENABLED flag;
+    # True/False is an explicit per-workspace override.
+    versioning_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

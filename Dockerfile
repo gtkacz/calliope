@@ -21,6 +21,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 FROM docker.io/library/python:3.12-slim AS runtime
 WORKDIR /app
 
+# git powers the optional per-workspace file version history feature.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd --create-home --uid 10001 calliope
 
 COPY --from=builder --chown=calliope:calliope /app /app

@@ -1,5 +1,6 @@
 from calliope.domain.schemas import WorkspaceCreate, WorkspacePatch, WorkspaceRead
 from calliope.repositories.workspaces import WorkspaceRepository
+from calliope.services.versioning import VersioningService
 from sqlalchemy.orm import Session
 
 
@@ -20,4 +21,7 @@ class WorkspaceService:
         return self.repository.update(workspace_id, payload)
 
     def delete(self, workspace_id: str) -> None:
+        workspace = self.repository.get(workspace_id)
         self.repository.delete(workspace_id)
+        # Best-effort cleanup of the shadow version store; never block deletion.
+        VersioningService(workspace.root_path).destroy()

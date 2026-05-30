@@ -45,7 +45,7 @@ def test_database_tables_are_created(db_engine) -> None:
 def test_database_schema_is_applied_by_migrations(db_session) -> None:
     version = db_session.execute(text("select version_num from alembic_version"))
 
-    assert version.scalar_one() == "0001_initial"
+    assert version.scalar_one() == "0002_workspace_versioning_enabled"
 
 
 def test_vector_l2_distance_orders_nearest_chunk_first(db_session) -> None:

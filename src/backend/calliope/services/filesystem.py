@@ -1,7 +1,11 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import DirectoryEntry, DirectoryListing, FileContent
+
+if TYPE_CHECKING:
+    from calliope.services.versioning import VersioningService
 
 
 class FilesystemService:
@@ -61,7 +65,14 @@ class FilesystemService:
 
         return FileContent(path=str(resolved), content=content)
 
-    def write_file(self, raw_path: str, content: str) -> FileContent:
+    def write_file(
+        self,
+        raw_path: str,
+        content: str,
+        *,
+        cause: str | None = None,
+        versioning: "VersioningService | None" = None,
+    ) -> FileContent:
         candidate = Path(raw_path)
         try:
             resolved = candidate.resolve(strict=True)
@@ -88,6 +99,22 @@ class FilesystemService:
 
         self._confine(resolved)
 
+        if versioning is None:
+            self._write_text(resolved, content)
+            return FileContent(path=str(resolved), content=content)
+
+        # Versioned write: snapshot the pre-edit baseline (once) and the new
+        # content, serialized per workspace. Every snapshot step is best-effort
+        # and runs around — never instead of — the actual write.
+        with versioning.lock():
+            versioning.ensure_initialized()
+            versioning.ensure_baseline(resolved)
+            self._write_text(resolved, content)
+            versioning.snapshot(resolved, cause)
+
+        return FileContent(path=str(resolved), content=content)
+
+    def _write_text(self, resolved: Path, content: str) -> None:
         try:
             resolved.write_text(content, encoding="utf-8")
         except PermissionError as exc:
@@ -102,8 +129,6 @@ class FilesystemService:
                 message=f"Write failed: {resolved}",
                 status_code=400,
             ) from exc
-
-        return FileContent(path=str(resolved), content=content)
 
     def _confine(self, resolved: Path) -> None:
         """Guard against path-traversal: resolved must be inside browse_root."""

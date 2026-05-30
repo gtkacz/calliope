@@ -1,3 +1,4 @@
+from calliope.domain.constants import VERSION_STORE_DIRNAME
 from calliope.domain.enums import CanonPolicy, ProfileCapability, ProfileKind
 from calliope.domain.schemas import SourceReference, WorkspaceCreate
 
@@ -6,7 +7,14 @@ def test_workspace_create_defaults_globs() -> None:
     payload = WorkspaceCreate(name="World", root_path="/tmp/world")
 
     assert payload.include_globs == ["**/*.md", "**/*.markdown"]
-    assert payload.exclude_globs == [".git/**", ".venv/**", "node_modules/**"]
+    assert payload.exclude_globs == [
+        ".git/**",
+        ".venv/**",
+        "node_modules/**",
+        f"{VERSION_STORE_DIRNAME}/**",
+    ]
+    # Per-workspace versioning is unset by default, inheriting the global flag.
+    assert payload.versioning_enabled is None
 
 
 def test_source_reference_contains_citation_fields() -> None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from calliope.domain.constants import VERSION_STORE_DIRNAME
 from calliope.domain.enums import CanonPolicy, EditMode, ProfileCapability, ProfileKind
 from pydantic import BaseModel, Field
 
@@ -12,8 +13,15 @@ class WorkspaceCreate(BaseModel):
     root_path: str
     include_globs: list[str] = Field(default_factory=lambda: ["**/*.md", "**/*.markdown"])
     exclude_globs: list[str] = Field(
-        default_factory=lambda: [".git/**", ".venv/**", "node_modules/**"]
+        default_factory=lambda: [
+            ".git/**",
+            ".venv/**",
+            "node_modules/**",
+            f"{VERSION_STORE_DIRNAME}/**",
+        ]
     )
+    # Tri-state: None inherits the global versioning flag; True/False overrides it.
+    versioning_enabled: bool | None = None
 
 
 class WorkspacePatch(BaseModel):
@@ -21,6 +29,7 @@ class WorkspacePatch(BaseModel):
     root_path: str | None = None
     include_globs: list[str] | None = None
     exclude_globs: list[str] | None = None
+    versioning_enabled: bool | None = None
 
 
 class WorkspaceRead(WorkspaceCreate):
@@ -49,6 +58,27 @@ class FileContent(BaseModel):
 class FileWriteRequest(BaseModel):
     path: str
     content: str
+    # Optional label describing why the write happened (e.g. "manual save" or
+    # "LLM edit: <instruction>"); recorded as the version-snapshot commit message.
+    cause: str | None = None
+
+
+class FileVersion(BaseModel):
+    sha: str
+    timestamp: datetime
+    cause: str
+    size_bytes: int
+    is_binary: bool
+
+
+class FileHistory(BaseModel):
+    path: str
+    versions: list[FileVersion]
+
+
+class FileRestoreRequest(BaseModel):
+    path: str
+    sha: str
 
 
 class ProfileCreate(BaseModel):

@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     # default. Only paths under a mounted root are visible to the containerized
     # backend. None falls back to the user's home directory.
     browse_root: str | None = None
+    # Feature flag (opt-in) for the per-workspace shadow-git file version history.
+    # Off by default because enabling it writes a .calliope-git store into each
+    # versioned workspace folder.
+    versioning_enabled: bool = False
     embedding_dimensions: int = Field(default=384, ge=1)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],

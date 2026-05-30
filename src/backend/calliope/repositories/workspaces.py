@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from calliope.db.models import Workspace
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import WorkspaceCreate, WorkspacePatch, WorkspaceRead
@@ -16,6 +18,7 @@ class WorkspaceRepository:
             root_path=payload.root_path,
             include_globs=payload.include_globs,
             exclude_globs=payload.exclude_globs,
+            versioning_enabled=payload.versioning_enabled,
         )
         self.session.add(workspace)
         try:
@@ -52,6 +55,10 @@ class WorkspaceRepository:
             workspace.include_globs = payload.include_globs
         if payload.exclude_globs is not None:
             workspace.exclude_globs = payload.exclude_globs
+        # None is a meaningful value here (inherit global), so distinguish an
+        # explicit null from an omitted field via the set of provided fields.
+        if "versioning_enabled" in payload.model_fields_set:
+            workspace.versioning_enabled = payload.versioning_enabled
         try:
             self.session.commit()
         except IntegrityError as exc:
@@ -69,6 +76,23 @@ class WorkspaceRepository:
         workspace = self._get_row(workspace_id)
         self.session.delete(workspace)
         self.session.commit()
+
+    def find_by_path(self, absolute_path: str) -> Workspace | None:
+        """Return the workspace whose root_path contains the given absolute path,
+        preferring the longest (most specific) root when several overlap."""
+        target = Path(absolute_path)
+        best: Workspace | None = None
+        best_len = -1
+        for workspace in self.session.scalars(select(Workspace)).all():
+            try:
+                root = Path(workspace.root_path).resolve()
+            except OSError:
+                continue
+            if target == root or root in target.parents:
+                root_len = len(str(root))
+                if root_len > best_len:
+                    best, best_len = workspace, root_len
+        return best
 
     def _get_row(self, workspace_id: str) -> Workspace:
         workspace = self.session.get(Workspace, workspace_id)
@@ -89,5 +113,6 @@ class WorkspaceRepository:
             root_path=workspace.root_path,
             include_globs=workspace.include_globs,
             exclude_globs=workspace.exclude_globs,
+            versioning_enabled=workspace.versioning_enabled,
             created_at=workspace.created_at,
         )

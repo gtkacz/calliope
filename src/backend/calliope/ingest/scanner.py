@@ -6,6 +6,8 @@ from fnmatch import fnmatchcase
 from hashlib import sha256
 from pathlib import Path
 
+from calliope.domain.constants import VERSION_STORE_DIRNAME
+
 
 @dataclass(frozen=True)
 class ScannedFile:
@@ -25,6 +27,9 @@ def scan_workspace(
 
     for path in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
         relative_path = path.relative_to(root).as_posix()
+        # Never index Calliope's own version-history store.
+        if relative_path.split("/", 1)[0] == VERSION_STORE_DIRNAME:
+            continue
         if not _matches_any(relative_path, include_globs):
             continue
         if _matches_any(relative_path, exclude_globs):

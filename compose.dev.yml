@@ -44,6 +44,13 @@ services:
       # Folder the in-app picker opens on; it can only browse paths that are
       # bind-mounted in (see the volume below). Keep it in sync with the mount.
       CALLIOPE_BROWSE_ROOT: ${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}
+      # Provider API keys forwarded to the backend so a connection profile whose
+      # "API key (env var)" names one of these can authenticate. The profile
+      # references the env-var NAME (e.g. OPENAI_API_KEY); the value lives in .env.
+      # Unset keys pass through empty and are ignored (local Ollama/LM Studio need none).
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
       - "${BACKEND_HOST_PORT:-8000}:8000"
     volumes:

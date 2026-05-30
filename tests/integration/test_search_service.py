@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.db.models import ChatMessage
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import SearchRequest, SourceReference, WorkspaceCreate
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 class FakeEmbeddingClient:
     async def embed(self, text: str) -> list[float]:
         value = 1.0 if "Kaelen" in text else 0.1
-        return [value] * 384
+        return [value] * EMBEDDING_DIMENSIONS
 
 
 def test_search_returns_sources_for_indexed_workspace(db_session: Session) -> None:
@@ -230,7 +231,7 @@ class LoopRecordingEmbeddingClient:
         if self.loops and loop is not self.loops[0]:
             raise AssertionError("SearchService used more than one event loop for embeddings")
         self.loops.append(loop)
-        return [0.1] * 384
+        return [0.1] * EMBEDDING_DIMENSIONS
 
     async def aclose(self) -> None:
         self.close_loop = asyncio.get_running_loop()

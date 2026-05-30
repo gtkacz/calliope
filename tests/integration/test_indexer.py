@@ -3,9 +3,7 @@ from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
-from sqlalchemy import func, select
-from sqlalchemy.orm import Session
-
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.db.models import Chunk, Document
 from calliope.domain.schemas import SearchRequest, WorkspaceCreate
 from calliope.ingest import indexer
@@ -13,11 +11,13 @@ from calliope.ingest.chunker import MarkdownChunk
 from calliope.ingest.indexer import Reindexer
 from calliope.repositories.workspaces import WorkspaceRepository
 from calliope.services.search import SearchService
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
 
 
 class FakeEmbeddingClient:
     async def embed(self, text: str) -> list[float]:
-        return [float(len(text) % 7)] * 384
+        return [float(len(text) % 7)] * EMBEDDING_DIMENSIONS
 
 
 class SingleLoopEmbeddingClient:
@@ -33,7 +33,7 @@ class SingleLoopEmbeddingClient:
         elif self.loop_id != current_loop_id:
             raise RuntimeError("embedding client crossed event loops")
 
-        return [float(len(text) % 7)] * 384
+        return [float(len(text) % 7)] * EMBEDDING_DIMENSIONS
 
     async def aclose(self) -> None:
         self.close_loop_id = id(asyncio.get_running_loop())

@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.db.models import (
     Base,
     ChatMessage,
@@ -45,7 +46,7 @@ def test_database_tables_are_created(db_engine) -> None:
 def test_database_schema_is_applied_by_migrations(db_session) -> None:
     version = db_session.execute(text("select version_num from alembic_version"))
 
-    assert version.scalar_one() == "0002_versioning_enabled"
+    assert version.scalar_one() == "0003_embedding_dims_1024"
 
 
 def test_vector_l2_distance_orders_nearest_chunk_first(db_session) -> None:
@@ -70,7 +71,7 @@ def test_vector_l2_distance_orders_nearest_chunk_first(db_session) -> None:
         text="near",
         token_count=1,
         metadata_json={},
-        embedding=[0.0] * 384,
+        embedding=[0.0] * EMBEDDING_DIMENSIONS,
     )
     farther = Chunk(
         document=document,
@@ -79,14 +80,14 @@ def test_vector_l2_distance_orders_nearest_chunk_first(db_session) -> None:
         text="far",
         token_count=1,
         metadata_json={},
-        embedding=[1.0] * 384,
+        embedding=[1.0] * EMBEDDING_DIMENSIONS,
     )
     db_session.add_all([workspace, document, nearer, farther])
     db_session.commit()
 
     ordered_ids = db_session.execute(
         text("select id from chunks order by embedding <-> :query limit 2"),
-        {"query": "[" + ",".join(["0"] * 384) + "]"},
+        {"query": "[" + ",".join(["0"] * EMBEDDING_DIMENSIONS) + "]"},
     ).scalars()
 
     assert list(ordered_ids) == [nearer.id, farther.id]

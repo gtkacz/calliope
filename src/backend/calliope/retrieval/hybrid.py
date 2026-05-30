@@ -6,7 +6,9 @@ from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol, TypeVar, cast
 
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.db.models import Chunk, Document
+from calliope.llm.openai_compatible import verify_embedding_dimension
 from sqlalchemy import bindparam, func, select
 from sqlalchemy.orm import Session
 
@@ -120,7 +122,11 @@ class HybridRetriever:
         workspace_id: str | None = None,
         limit: int = 8,
     ) -> list[FusedHit]:
-        embedding = self._async_runner.run(self.embedding_client.embed(query))
+        embedding = verify_embedding_dimension(
+            self._async_runner.run(self.embedding_client.embed(query)),
+            EMBEDDING_DIMENSIONS,
+            model=getattr(self.embedding_client, "model", None),
+        )
         search_limit = limit * 2
         vector_ids = self._vector_search(embedding, workspace_id=workspace_id, limit=search_limit)
         lexical_ids = self._lexical_search(query, workspace_id=workspace_id, limit=search_limit)

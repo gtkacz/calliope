@@ -4,9 +4,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.ingest.chunker import chunk_document
 from calliope.ingest.parser import parse_markdown_file
 from calliope.ingest.scanner import scan_workspace
+from calliope.llm.openai_compatible import verify_embedding_dimension
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
@@ -105,8 +107,16 @@ class Reindexer:
                     raise
 
     async def _embed_documents(self, document_texts: list[list[str]]) -> list[list[list[float]]]:
+        model = getattr(self.embedding_client, "model", None)
         return [
-            [await self.embedding_client.embed(text) for text in chunk_texts]
+            [
+                verify_embedding_dimension(
+                    await self.embedding_client.embed(text),
+                    EMBEDDING_DIMENSIONS,
+                    model=model,
+                )
+                for text in chunk_texts
+            ]
             for chunk_texts in document_texts
         ]
 

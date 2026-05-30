@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.domain.enums import CanonPolicy
 from calliope.domain.schemas import ChatRequest, SourceReference, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
@@ -17,7 +18,7 @@ from sqlalchemy.orm import Session
 class FakeEmbeddingClient:
     async def embed(self, text: str) -> list[float]:
         value = 1.0 if "Kaelen" in text else 0.1
-        return [value] * 384
+        return [value] * EMBEDDING_DIMENSIONS
 
 
 class FakeChatClient:
@@ -166,7 +167,7 @@ class LoopRecordingChatClient:
 
     async def embed(self, text: str) -> list[float]:
         self._record_loop()
-        return [0.1] * 384
+        return [0.1] * EMBEDDING_DIMENSIONS
 
     async def chat(self, messages: list[dict[str, str]]) -> str:
         self._record_loop()

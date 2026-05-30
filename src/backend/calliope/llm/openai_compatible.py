@@ -5,6 +5,36 @@ import httpx
 from calliope.domain.errors import AppError
 
 
+def verify_embedding_dimension(
+    vector: list[float],
+    expected: int,
+    *,
+    model: str | None = None,
+) -> list[float]:
+    """Guard the embedding/column-width contract at the point of production.
+
+    A vector whose width differs from the pgvector column would otherwise fail
+    deep in the driver with an opaque error on insert (indexing) or on the `<->`
+    operator (retrieval). Comparing here lets us fail fast with a message that
+    names the offending model and the expected width, which is the only
+    actionable information for the operator."""
+    actual = len(vector)
+    if actual == expected:
+        return vector
+
+    raise AppError(
+        code="embedding_dimension_mismatch",
+        message=(
+            f"Embedding model {model or '<unknown>'!r} returned {actual}-dimensional "
+            f"vectors, but the database stores {expected}-dimensional embeddings. "
+            f"Select an embeddings model whose native output width is {expected}, "
+            f"or migrate CALLIOPE_EMBEDDING_DIMENSIONS and the chunks.embedding column."
+        ),
+        status_code=500,
+        details={"expected": expected, "actual": actual, "model": model},
+    )
+
+
 class OpenAICompatibleClient:
     def __init__(
         self,

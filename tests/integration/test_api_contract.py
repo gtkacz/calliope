@@ -7,7 +7,7 @@ from calliope.api import dependencies as api_dependencies
 from calliope.api.app import create_app
 from calliope.api.dependencies import get_db_session
 from calliope.api.routes import chat as chat_route
-from calliope.config import Settings
+from calliope.config import EMBEDDING_DIMENSIONS, Settings
 from calliope.domain.enums import ProfileCapability, ProfileKind
 from calliope.domain.schemas import ChatRequest, ProfileCreate, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
@@ -36,7 +36,7 @@ class FakeOpenAICompatibleClient:
 
     async def embed(self, text: str) -> list[float]:
         value = 1.0 if "Kaelen" in text else 0.1
-        return [value] * 384
+        return [value] * EMBEDDING_DIMENSIONS
 
     async def chat(self, messages: list[dict[str, str]]) -> str:
         self.chat_models.append(self.model)

@@ -2,7 +2,6 @@ import os
 from typing import Any
 
 import pytest
-
 from calliope.config import EMBEDDING_DIMENSIONS, Settings
 
 

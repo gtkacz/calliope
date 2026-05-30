@@ -37,6 +37,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_chunks_embedding", table_name="chunks", postgresql_using="hnsw")
+    # pgvector cannot cast a stored vector to a different width, and shrinking the
+    # column invalidates every embedding regardless, so clear them before the
+    # type change; a re-index repopulates the column at the old width.
+    op.execute("UPDATE chunks SET embedding = NULL")
     op.alter_column(
         "chunks",
         "embedding",

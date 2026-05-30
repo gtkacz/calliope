@@ -65,6 +65,8 @@ function sourcesFor(message: MessageRead): SourceReference[] {
   gap: 1.4rem;
   padding: 2.5rem 2.5rem 1.5rem;
   overflow: auto;
+  max-width: 80%;
+  margin: 0 auto;
 }
 
 .timeline.is-empty {

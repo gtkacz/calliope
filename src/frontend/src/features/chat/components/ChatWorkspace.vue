@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 
 import { apiBaseUrl } from "@/shared/api/client";
+import type { SessionSummary } from "../types";
 import { useChatStore } from "../stores/chatStore";
 import { useProfileStore } from "@/features/profiles/stores/profileStore";
 import { useSettingsStore } from "@/features/settings/stores/settingsStore";
@@ -54,6 +55,36 @@ function startNewConversation() {
   chat.messages = [];
 }
 
+const deleteTarget = ref<SessionSummary | null>(null);
+const deleting = ref(false);
+const deleteError = ref<string | null>(null);
+
+function requestDelete(sessionId: string) {
+  deleteError.value = null;
+  deleteTarget.value = chat.sessions.find((s) => s.id === sessionId) ?? null;
+}
+
+function cancelDelete() {
+  if (deleting.value) return;
+  deleteTarget.value = null;
+  deleteError.value = null;
+}
+
+async function confirmDelete() {
+  if (deleteTarget.value === null) return;
+  deleting.value = true;
+  deleteError.value = null;
+  try {
+    await chat.deleteSession(deleteTarget.value.id);
+    deleteTarget.value = null;
+  } catch (error) {
+    deleteError.value =
+      error instanceof Error ? error.message : "Failed to delete conversation.";
+  } finally {
+    deleting.value = false;
+  }
+}
+
 async function loadInitialData() {
   if (startupLoading.value) return;
   startupLoading.value = true;
@@ -90,6 +121,7 @@ onMounted(loadInitialData);
       :active-workspace-name="activeWorkspaceName"
       @new-session="startNewConversation"
       @open-session="chat.openSession"
+      @delete-session="requestDelete"
     />
 
     <section class="chat-main">
@@ -202,6 +234,42 @@ onMounted(loadInitialData);
 
     <SettingsDialog />
     <EditorPanel v-model:open="editorOpen" />
+
+    <v-dialog
+      :model-value="deleteTarget !== null"
+      max-width="440"
+      @update:model-value="(value) => { if (!value) cancelDelete(); }"
+    >
+      <div class="delete-confirm">
+        <span class="calliope-eyebrow delete-confirm__eyebrow">Delete conversation</span>
+        <h2 class="calliope-serif delete-confirm__title">
+          Delete &ldquo;{{ deleteTarget?.title ?? 'Untitled' }}&rdquo;?
+        </h2>
+        <p class="delete-confirm__body">
+          This permanently removes the conversation and every message in it. This
+          action can&rsquo;t be undone.
+        </p>
+        <p v-if="deleteError" class="delete-confirm__error">{{ deleteError }}</p>
+        <div class="delete-confirm__actions">
+          <v-btn
+            variant="text"
+            color="default"
+            :disabled="deleting"
+            @click="cancelDelete"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            variant="flat"
+            color="error"
+            :loading="deleting"
+            @click="confirmDelete"
+          >
+            Delete
+          </v-btn>
+        </div>
+      </div>
+    </v-dialog>
   </div>
 </template>
 
@@ -348,5 +416,50 @@ onMounted(loadInitialData);
 
 .chat-hint__link:hover {
   text-decoration-color: var(--calliope-bronze);
+}
+
+.delete-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.6rem 1.7rem 1.4rem;
+  background: var(--calliope-ink-soft);
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-lg);
+  box-shadow: var(--calliope-shadow-lift);
+}
+
+.delete-confirm__eyebrow {
+  color: var(--calliope-warm-error);
+  letter-spacing: 0.22em;
+}
+
+.delete-confirm__title {
+  margin: 0.1rem 0 0;
+  font-size: 1.25rem;
+  font-weight: 440;
+  letter-spacing: -0.01em;
+  color: var(--calliope-paper);
+}
+
+.delete-confirm__body {
+  margin: 0;
+  color: var(--calliope-paper-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.delete-confirm__error {
+  margin: 0;
+  color: var(--calliope-warm-error);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.delete-confirm__actions {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
 }
 </style>

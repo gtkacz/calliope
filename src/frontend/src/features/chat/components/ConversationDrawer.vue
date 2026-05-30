@@ -14,6 +14,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'new-session': []
   'open-session': [sessionId: string]
+  'delete-session': [sessionId: string]
   'create-folder': [name: string]
   'rename-folder': [folderId: string, name: string]
   'delete-folder': [folderId: string]
@@ -172,6 +173,14 @@ function formatTimestamp(iso: string): string {
                 formatTimestamp(session.updated_at)
               }}</span>
             </button>
+            <button
+              type="button"
+              class="drawer-session__delete"
+              aria-label="Delete conversation"
+              @click.stop="emit('delete-session', session.id)"
+            >
+              <v-icon size="14" icon="mdi-delete-outline" />
+            </button>
           </Motion>
           <li v-if="sessionsForFolder(folder.id).length === 0" class="drawer-empty calliope-mono">
             Empty folder
@@ -204,6 +213,14 @@ function formatTimestamp(iso: string): string {
               <span class="drawer-session__meta calliope-mono">{{
                 formatTimestamp(session.updated_at)
               }}</span>
+            </button>
+            <button
+              type="button"
+              class="drawer-session__delete"
+              aria-label="Delete conversation"
+              @click.stop="emit('delete-session', session.id)"
+            >
+              <v-icon size="14" icon="mdi-delete-outline" />
             </button>
           </Motion>
           <li v-if="unfiledSessions.length === 0" class="drawer-empty calliope-mono">
@@ -397,7 +414,9 @@ function formatTimestamp(iso: string): string {
 }
 
 .drawer-session-row {
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
 }
 
 .drawer-session {
@@ -458,6 +477,35 @@ function formatTimestamp(iso: string): string {
 
 .drawer-session.is-active .drawer-session__meta {
   color: var(--calliope-paper-muted);
+}
+
+.drawer-session__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 0.25rem;
+  background: transparent;
+  border: none;
+  color: var(--calliope-paper-dim);
+  border-radius: var(--calliope-radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--calliope-duration-fast) var(--calliope-ease-out),
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.drawer-session-row:hover .drawer-session__delete,
+.drawer-session__delete:focus-visible {
+  opacity: 1;
+}
+
+.drawer-session__delete:hover {
+  background: var(--calliope-overlay-hover);
+  color: var(--calliope-warm-error);
 }
 
 .drawer-empty {

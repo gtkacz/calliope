@@ -66,6 +66,16 @@ export const useChatStore = defineStore("chat", {
       this.activeSessionId = detail.id;
       this.messages = detail.messages;
     },
+    async deleteSession(sessionId: string) {
+      await chatApi.deleteSession(sessionId);
+      this.sessions = this.sessions.filter(
+        (session) => session.id !== sessionId,
+      );
+      if (this.activeSessionId === sessionId) {
+        this.activeSessionId = null;
+        this.messages = [];
+      }
+    },
     async loadMentionDocuments() {
       if (this.selectedWorkspaceId === null) return;
       try {

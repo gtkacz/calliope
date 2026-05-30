@@ -238,6 +238,50 @@ function displayRole(role: string): string {
   border-radius: var(--calliope-radius-sm);
 }
 
+/* Inline source citations — the model emits "(path.md; other.md)" in prose;
+   markdown.ts rewrites each into a tag that flows within the line. */
+.markdown-body :deep(.md-citation) {
+  display: inline;
+}
+
+.markdown-body :deep(.md-citation__item) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32em;
+  margin: 0 0.12em;
+  padding: 0.1em 0.55em 0.1em 0.45em;
+  font-family: var(--calliope-font-mono);
+  font-size: 0.74em;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+  color: var(--calliope-bronze);
+  background: var(--calliope-bronze-veil);
+  border: 1px solid var(--calliope-bronze-glow);
+  border-radius: var(--calliope-radius-pill);
+  vertical-align: -0.16em;
+  cursor: default;
+  transition:
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.markdown-body :deep(.md-citation__item::before) {
+  content: '';
+  flex: none;
+  width: 0.85em;
+  height: 0.85em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M13%209V3.5L18.5%209M6%202c-1.1%200-2%20.9-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8l-6-6H6z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M13%209V3.5L18.5%209M6%202c-1.1%200-2%20.9-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8l-6-6H6z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.markdown-body :deep(.md-citation__item:hover) {
+  color: var(--calliope-bronze-deep);
+  background: var(--calliope-bronze-glow);
+  border-color: var(--calliope-bronze);
+}
+
 .assistant-turn__sources {
   margin-top: 0.65rem;
   display: flex;

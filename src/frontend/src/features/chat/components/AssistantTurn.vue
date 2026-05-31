@@ -5,6 +5,7 @@ import { renderMarkdown } from '@/shared/markdown'
 
 import type { SourceReference } from '../types'
 import { useSourceViewerStore } from '../stores/sourceViewerStore'
+import CopyMessageButton from './CopyMessageButton.vue'
 import SourceChip from './SourceChip.vue'
 
 const props = defineProps<{
@@ -55,8 +56,11 @@ function onContentClick(event: MouseEvent) {
 <template>
   <div class="assistant-turn">
     <header class="assistant-turn__head">
-      <span class="assistant-turn__role calliope-serif">{{ displayRole(role) }}</span>
-      <span v-if="role === 'search'" class="assistant-turn__tag calliope-mono">retrieval</span>
+      <div class="assistant-turn__identity">
+        <span class="assistant-turn__role calliope-serif">{{ displayRole(role) }}</span>
+        <span v-if="role === 'search'" class="assistant-turn__tag calliope-mono">retrieval</span>
+      </div>
+      <CopyMessageButton :content="content" />
     </header>
     <!-- Assistant output is LLM-authored markdown; renderMarkdown sanitizes before v-html. -->
     <div
@@ -88,8 +92,16 @@ function onContentClick(event: MouseEvent) {
 
 .assistant-turn__head {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--calliope-space-xs);
+}
+
+.assistant-turn__identity {
+  display: flex;
   align-items: baseline;
   gap: var(--calliope-space-xs);
+  min-width: 0;
 }
 
 .assistant-turn__role {

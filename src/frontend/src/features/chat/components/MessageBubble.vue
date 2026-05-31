@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import CopyMessageButton from './CopyMessageButton.vue'
+
 defineProps<{
   content: string
 }>()
@@ -6,7 +8,10 @@ defineProps<{
 
 <template>
   <div class="message-bubble">
-    <span class="message-bubble__role calliope-eyebrow">You</span>
+    <header class="message-bubble__head">
+      <span class="message-bubble__role calliope-eyebrow">You</span>
+      <CopyMessageButton :content="content" />
+    </header>
     <p class="message-bubble__content">{{ content }}</p>
   </div>
 </template>
@@ -23,6 +28,13 @@ defineProps<{
   display: flex;
   flex-direction: column;
   gap: var(--calliope-space-2xs);
+}
+
+.message-bubble__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--calliope-space-sm);
 }
 
 .message-bubble__role {

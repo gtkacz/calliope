@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from calliope.domain.errors import AppError
 from calliope.llm.openai_compatible import OpenAICompatibleClient
 
@@ -131,6 +130,22 @@ def test_close_closes_owned_http_client_from_sync_context() -> None:
     client.close()
 
     assert client.http_client.is_closed
+
+
+def test_client_uses_configured_timeout_for_owned_http_client() -> None:
+    client = OpenAICompatibleClient(
+        base_url="http://local/v1",
+        model="embed-model",
+        timeout_seconds=240,
+    )
+
+    try:
+        assert client.http_client.timeout.read == 240
+        assert client.http_client.timeout.connect == 240
+        assert client.http_client.timeout.write == 240
+        assert client.http_client.timeout.pool == 240
+    finally:
+        client.close()
 
 
 @pytest.mark.asyncio

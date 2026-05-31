@@ -2,6 +2,7 @@ import asyncio
 from typing import Any
 
 import httpx
+from calliope.config import DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
 from calliope.domain.errors import AppError
 
 
@@ -42,12 +43,13 @@ class OpenAICompatibleClient:
         model: str,
         api_key: str | None = None,
         http_client: httpx.AsyncClient | None = None,
+        timeout_seconds: float = DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.api_key = api_key or "not-needed"
         self._owns_http_client = http_client is None
-        self.http_client = http_client or httpx.AsyncClient(timeout=30)
+        self.http_client = http_client or httpx.AsyncClient(timeout=timeout_seconds)
         self._closed = False
 
     async def aclose(self) -> None:

@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from calliope.api.dependencies import get_db_session, get_embedding_client
+from calliope.api.dependencies import get_db_session, get_embedding_client, get_settings
+from calliope.config import Settings
 from calliope.domain.schemas import SearchRequest, SearchResponse
 from calliope.ingest.indexer import EmbeddingClient
 from calliope.services.search import SearchService
@@ -14,8 +15,9 @@ router = APIRouter()
 def search(
     request: SearchRequest,
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> SearchResponse:
-    embedding_client: EmbeddingClient = get_embedding_client(session)
+    embedding_client: EmbeddingClient = get_embedding_client(session, settings)
     service = SearchService(
         session,
         embedding_client,

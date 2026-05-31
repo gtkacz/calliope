@@ -17,7 +17,7 @@ def propose_edit(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> EditProposal:
-    chat_client = get_chat_client_for_profile(session, request.chat_profile_id)
+    chat_client = get_chat_client_for_profile(session, request.chat_profile_id, settings)
     service = EditorService(
         filesystem=FilesystemService(browse_root=settings.browse_root),
         chat_client=chat_client,

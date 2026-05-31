@@ -4,7 +4,9 @@ from calliope.api.dependencies import (
     get_chat_client_for_profile,
     get_db_session,
     get_embedding_client,
+    get_settings,
 )
+from calliope.config import Settings
 from calliope.domain.schemas import ChatRequest, ChatResponse
 from calliope.ingest.indexer import EmbeddingClient
 from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
@@ -19,12 +21,14 @@ router = APIRouter()
 def chat(
     request: ChatRequest,
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> ChatResponse:
-    embedding_client: EmbeddingClient = get_embedding_client(session)
+    embedding_client: EmbeddingClient = get_embedding_client(session, settings)
     try:
         chat_client: ChatClient = get_chat_client_for_profile(
             session,
             request.chat_profile_id,
+            settings,
         )
     except Exception:
         runner = _AsyncRunner()

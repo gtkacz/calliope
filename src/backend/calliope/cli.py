@@ -34,8 +34,9 @@ app.add_typer(sessions_app, name="sessions")
 
 
 @contextmanager
-def session_scope() -> Iterator[Session]:
-    factory = create_session_factory(Settings().database_url)
+def session_scope(settings: Settings | None = None) -> Iterator[Session]:
+    resolved_settings = settings or Settings()
+    factory = create_session_factory(resolved_settings.database_url)
     with factory() as session:
         yield session
 
@@ -50,12 +51,14 @@ def api_key_for(api_key_ref: str | None) -> str | None:
 def profile_client(
     session: Session,
     capability: ProfileCapability,
+    settings: Settings,
 ) -> OpenAICompatibleClient:
     profile = ProfileService(session).require_default_capability(capability)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile.api_key_ref),
+        timeout_seconds=settings.llm_request_timeout_seconds,
     )
 
 
@@ -177,13 +180,15 @@ def profiles_list(
 def profiles_test(name: str) -> None:
     """Validate that a profile can be loaded."""
     client: OpenAICompatibleClient | None = None
+    settings = Settings()
     try:
-        with session_scope() as session:
+        with session_scope(settings) as session:
             profile = ProfileService(session).get_by_name(name)
             client = OpenAICompatibleClient(
                 base_url=profile.base_url,
                 model=profile.model,
                 api_key=api_key_for(profile.api_key_ref),
+                timeout_seconds=settings.llm_request_timeout_seconds,
             )
     except AppError as exc:
         raise_cli_error(exc)
@@ -197,15 +202,20 @@ def profiles_test(name: str) -> None:
 @app.command()
 def reindex(workspace: Annotated[str | None, typer.Argument()] = None) -> None:
     """Reindex one workspace or all workspaces."""
+    settings = Settings()
     try:
-        with session_scope() as session:
+        with session_scope(settings) as session:
             workspace_ids = (
                 [resolve_workspace_id(session, workspace)]
                 if workspace is not None
                 else [candidate.id for candidate in WorkspaceService(session).list()]
             )
             for workspace_id in workspace_ids:
-                embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
+                embedding_client = profile_client(
+                    session,
+                    ProfileCapability.EMBEDDINGS,
+                    settings,
+                )
                 result = Reindexer(
                     session,
                     embedding_client=embedding_client,
@@ -225,9 +235,14 @@ def search(
     json_output: Annotated[bool, typer.Option("--json")] = False,
 ) -> None:
     """Search indexed workspace content."""
+    settings = Settings()
     try:
-        with session_scope() as session:
-            embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
+        with session_scope(settings) as session:
+            embedding_client = profile_client(
+                session,
+                ProfileCapability.EMBEDDINGS,
+                settings,
+            )
             service = SearchService(
                 session,
                 embedding_client,
@@ -262,11 +277,16 @@ def chat(
     policy: Annotated[CanonPolicy, typer.Option("--policy")] = CanonPolicy.STRICT_CANON,
 ) -> None:
     """Ask a question against indexed content."""
+    settings = Settings()
     try:
-        with session_scope() as session:
-            embedding_client = profile_client(session, ProfileCapability.EMBEDDINGS)
+        with session_scope(settings) as session:
+            embedding_client = profile_client(
+                session,
+                ProfileCapability.EMBEDDINGS,
+                settings,
+            )
             try:
-                chat_client = profile_client(session, ProfileCapability.CHAT)
+                chat_client = profile_client(session, ProfileCapability.CHAT, settings)
             except Exception:
                 close_client_suppress(embedding_client)
                 raise

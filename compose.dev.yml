@@ -41,6 +41,7 @@ services:
     environment:
       CALLIOPE_DATABASE_URL: postgresql+psycopg://calliope:calliope@postgres:5432/calliope
       CALLIOPE_CORS_ORIGINS: ${CALLIOPE_CORS_ORIGINS:-["http://localhost:5173","http://127.0.0.1:5173"]}
+      CALLIOPE_LLM_REQUEST_TIMEOUT_SECONDS: ${CALLIOPE_LLM_REQUEST_TIMEOUT_SECONDS:-120}
       # Folder the in-app picker opens on; it can only browse paths that are
       # bind-mounted in (see the volume below). Keep it in sync with the mount.
       CALLIOPE_BROWSE_ROOT: ${CALLIOPE_BROWSE_ROOT:-/var/tmp/calliope-notes}

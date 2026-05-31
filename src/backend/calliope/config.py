@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # requires a migration that alters the `chunks.embedding` column and re-embeds
 # every document, because vectors of different widths are not comparable.
 EMBEDDING_DIMENSIONS = 1024
+DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
 
 
 class Settings(BaseSettings):
@@ -23,6 +24,10 @@ class Settings(BaseSettings):
     # versioned workspace folder.
     versioning_enabled: bool = False
     embedding_dimensions: int = Field(default=EMBEDDING_DIMENSIONS, ge=1)
+    llm_request_timeout_seconds: float = Field(
+        default=DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
+        gt=0,
+    )
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )

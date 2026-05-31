@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from calliope.api.dependencies import get_db_session, get_embedding_client
+from calliope.api.dependencies import get_db_session, get_embedding_client, get_settings
+from calliope.config import Settings
 from calliope.domain.schemas import (
     ReindexRequest,
     ReindexResponse,
@@ -61,8 +62,9 @@ def delete_workspace(
 def reindex_workspace(
     payload: ReindexRequest,
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> ReindexResponse:
-    embedding_client: EmbeddingClient = get_embedding_client(session)
+    embedding_client: EmbeddingClient = get_embedding_client(session, settings)
     reindexer = Reindexer(
         session,
         embedding_client=embedding_client,

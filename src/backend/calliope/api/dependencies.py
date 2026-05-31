@@ -32,32 +32,37 @@ def api_key_for(profile: ProfileRead) -> str | None:
 
 def get_embedding_client(
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> OpenAICompatibleClient:
     profile = ProfileService(session).require_default_capability(ProfileCapability.EMBEDDINGS)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
+        timeout_seconds=settings.llm_request_timeout_seconds,
     )
 
 
 def get_chat_client(
     session: Annotated[Session, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> OpenAICompatibleClient:
     profile = ProfileService(session).require_default_capability(ProfileCapability.CHAT)
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
+        timeout_seconds=settings.llm_request_timeout_seconds,
     )
 
 
 def get_chat_client_for_profile(
     session: Session,
     profile_id: str | None,
+    settings: Settings,
 ) -> OpenAICompatibleClient:
     if profile_id is None:
-        return get_chat_client(session)
+        return get_chat_client(session, settings)
     profile = ProfileService(session).require_capability_by_id(
         profile_id,
         ProfileCapability.CHAT,
@@ -66,4 +71,5 @@ def get_chat_client_for_profile(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
+        timeout_seconds=settings.llm_request_timeout_seconds,
     )

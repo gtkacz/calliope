@@ -29,10 +29,12 @@ class FakeOpenAICompatibleClient:
         base_url: str,
         model: str,
         api_key: str | None = None,
+        timeout_seconds: float = 120,
     ) -> None:
         self.base_url = base_url
         self.model = model
         self.api_key = api_key
+        self.timeout_seconds = timeout_seconds
 
     async def embed(self, text: str) -> list[float]:
         value = 1.0 if "Kaelen" in text else 0.1
@@ -200,12 +202,16 @@ def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
 
     embedding_client = FakeEmbeddingClient()
 
-    def fake_get_embedding_client(session: object) -> FakeEmbeddingClient:
+    def fake_get_embedding_client(
+        session: object,
+        settings: object,
+    ) -> FakeEmbeddingClient:
         return embedding_client
 
     def fake_get_chat_client_for_profile(
         session: object,
         profile_id: str | None,
+        settings: object,
     ) -> object:
         assert profile_id is None
         raise RuntimeError("chat client setup failed")
@@ -218,7 +224,11 @@ def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
     )
 
     with pytest.raises(RuntimeError, match="chat client setup failed"):
-        chat_route.chat(ChatRequest(message="Who is Kaelen?"), session=cast(Session, object()))
+        chat_route.chat(
+            ChatRequest(message="Who is Kaelen?"),
+            session=cast(Session, object()),
+            settings=Settings(api_title="Calliope", **SETTINGS_WITHOUT_ENV_FILE),
+        )
 
     assert embedding_client.closed
 

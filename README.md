@@ -38,6 +38,8 @@ docker compose exec backend calliope chat "What does canon say about the lake ci
 
 Use `host.docker.internal` (mapped to `host-gateway` in `docker-compose.yml`) as the base URL when your OpenAI-compatible service (for example, Ollama) runs on the host. On Fedora, bind-mounting workspace markdown directories into the backend container requires the `:Z` suffix on the volume so SELinux relabels the directory for container access.
 
+If a local model is slow to load or generate, increase `CALLIOPE_LLM_REQUEST_TIMEOUT_SECONDS` in `.env` and restart the backend. The default is 120 seconds.
+
 ### Without containers
 
 If you prefer to run services directly on your host, start just the database:

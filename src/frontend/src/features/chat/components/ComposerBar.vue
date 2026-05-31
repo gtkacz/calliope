@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { Motion } from "motion-v";
 
 import type { CanonPolicy, ComposerMode } from "../types";
@@ -33,6 +33,7 @@ const chat = useChatStore();
 const text = ref("");
 const focused = ref(false);
 const mentionMenuRef = ref<InstanceType<typeof MentionMenu> | null>(null);
+const inputRef = ref<{ focus: () => void } | null>(null);
 
 // Track whether documents have been loaded for the current open of the mention menu
 let mentionDocumentsLoaded = false;
@@ -158,6 +159,15 @@ function setMode(next: ComposerMode) {
   if (next === props.mode) return;
   emit("update:mode", next);
 }
+
+// Prefill the composer from an empty-state seed prompt, then focus so the
+// writer can edit before sending — deliberately does not auto-submit.
+function prefill(value: string) {
+  text.value = value;
+  nextTick(() => inputRef.value?.focus());
+}
+
+defineExpose({ prefill });
 </script>
 
 <template>
@@ -169,7 +179,7 @@ function setMode(next: ComposerMode) {
           :key="doc.id"
           class="composer__citation calliope-mono"
         >
-          <v-icon size="11" icon="mdi-file-document-outline" class="composer__citation-icon" aria-hidden="true" />
+          <v-icon size="11" icon="$mdi-file-document-outline" class="composer__citation-icon" aria-hidden="true" />
           @{{ doc.title || doc.path }}
           <button
             type="button"
@@ -191,6 +201,7 @@ function setMode(next: ComposerMode) {
           @select="onSelectMention"
         />
         <v-textarea
+          ref="inputRef"
           v-model="text"
           rows="1"
           auto-grow
@@ -244,7 +255,7 @@ function setMode(next: ComposerMode) {
             density="compact"
             hide-details
             class="composer__pill"
-            menu-icon="mdi-chevron-down"
+            menu-icon="$mdi-chevron-down"
             aria-label="Canon policy"
             @update:model-value="emit('update:policy', $event as CanonPolicy)"
           />
@@ -258,7 +269,7 @@ function setMode(next: ComposerMode) {
             hide-details
             placeholder="Workspace"
             class="composer__pill"
-            menu-icon="mdi-chevron-down"
+            menu-icon="$mdi-chevron-down"
             aria-label="Workspace"
             @update:model-value="emit('update:selectedWorkspaceId', $event)"
           />
@@ -273,7 +284,7 @@ function setMode(next: ComposerMode) {
             hide-details
             placeholder="Model"
             class="composer__pill"
-            menu-icon="mdi-chevron-down"
+            menu-icon="$mdi-chevron-down"
             aria-label="Chat profile"
             @update:model-value="emit('update:selectedChatProfileId', $event)"
           />
@@ -294,7 +305,7 @@ function setMode(next: ComposerMode) {
             aria-label="Submit"
             @click="submit"
           >
-            <v-icon v-if="!pending" icon="mdi-arrow-up" size="20" />
+            <v-icon v-if="!pending" icon="$mdi-arrow-up" size="20" />
             <span v-else class="composer__send-spinner" aria-hidden="true" />
           </button>
         </Motion>

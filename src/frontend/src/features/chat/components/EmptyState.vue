@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { Motion } from 'motion-v'
+import { Motion, useReducedMotion } from 'motion-v'
+
+const emit = defineEmits<{
+  'select-seed': [prompt: string]
+}>()
+
+// When reduced motion is preferred, skip the entrance offset entirely so the
+// content renders at its resting (visible) state rather than depending on the
+// animation to fade it in.
+const reduced = useReducedMotion()
 
 const seeds = [
-  { icon: 'mdi-book-open-page-variant-outline', label: 'Explore notes', prompt: 'What themes recur across my recent notes?' },
-  { icon: 'mdi-lightbulb-outline', label: 'Synthesise ideas', prompt: 'Connect the ideas I’ve been developing this week.' },
-  { icon: 'mdi-magnify', label: 'Search passages', prompt: 'Find every mention of the protagonist’s motivation.' },
-  { icon: 'mdi-quill', label: 'Draft with me', prompt: 'Help me write the next scene in my current chapter.' },
+  { icon: '$mdi-book-open-page-variant-outline', label: 'Explore notes', prompt: 'What themes recur across my recent notes?' },
+  { icon: '$mdi-lightbulb-outline', label: 'Synthesise ideas', prompt: 'Connect the ideas I’ve been developing this week.' },
+  { icon: '$mdi-magnify', label: 'Search passages', prompt: 'Find every mention of the protagonist’s motivation.' },
+  { icon: '$mdi-feather', label: 'Draft with me', prompt: 'Help me write the next scene in my current chapter.' },
 ]
 </script>
 
@@ -14,7 +23,7 @@ const seeds = [
     <Motion
       tag="div"
       class="empty-state__hero"
-      :initial="{ opacity: 0, y: 16 }"
+      :initial="reduced ? false : { opacity: 0, y: 16 }"
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.48, ease: [0.16, 1, 0.3, 1] }"
     >
@@ -32,18 +41,22 @@ const seeds = [
     <Motion
       tag="div"
       class="empty-state__seeds"
-      :initial="{ opacity: 0, y: 12 }"
+      :initial="reduced ? false : { opacity: 0, y: 12 }"
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.42, delay: 0.16, ease: [0.16, 1, 0.3, 1] }"
     >
       <Motion
         v-for="(seed, i) in seeds"
         :key="seed.label"
-        tag="div"
+        tag="button"
+        type="button"
         class="empty-state__seed"
-        :initial="{ opacity: 0, y: 8 }"
+        :initial="reduced ? false : { opacity: 0, y: 8 }"
         :animate="{ opacity: 1, y: 0 }"
+        :while-hover="{ y: -2 }"
+        :while-press="{ scale: 0.98 }"
         :transition="{ duration: 0.32, delay: 0.2 + i * 0.06, ease: [0.16, 1, 0.3, 1] }"
+        @click="emit('select-seed', seed.prompt)"
       >
         <span class="empty-state__seed-icon" aria-hidden="true">
           <v-icon :icon="seed.icon" size="18" />
@@ -127,6 +140,33 @@ const seeds = [
   border-radius: var(--calliope-radius-lg);
   text-align: left;
   box-shadow: var(--calliope-shadow-rest);
+  /* Reset native button chrome so the seed reads as an editorial card */
+  font: inherit;
+  width: 100%;
+  cursor: pointer;
+  transition:
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-base) var(--calliope-ease-out);
+}
+
+.empty-state__seed:hover {
+  border-color: var(--calliope-bronze);
+  background: var(--calliope-overlay-active);
+  box-shadow:
+    var(--calliope-shadow-rest),
+    0 0 18px -2px var(--calliope-bronze-glow);
+}
+
+.empty-state__seed:focus-visible {
+  outline: 2px solid var(--calliope-bronze);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empty-state__seed {
+    transition: none;
+  }
 }
 
 .empty-state__seed-icon {

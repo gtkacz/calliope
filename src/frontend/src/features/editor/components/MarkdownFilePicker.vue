@@ -205,7 +205,7 @@ onUnmounted(() => {
           variant="plain"
           hide-details
           placeholder="Type or paste an absolute path"
-          prepend-inner-icon="mdi-text-search-variant"
+          prepend-inner-icon="$mdi-text-search-variant"
           class="file-picker__manual-field"
           @update:model-value="onManualPathInput"
         />
@@ -217,7 +217,7 @@ onUnmounted(() => {
           aria-label="Go to parent folder"
           @click="goUp"
         >
-          <v-icon icon="mdi-arrow-up" size="16" />
+          <v-icon icon="$mdi-arrow-up" size="16" />
         </button>
       </div>
 
@@ -272,10 +272,10 @@ onUnmounted(() => {
             <v-icon
               :icon="
                 entry.is_dir
-                  ? 'mdi-folder-outline'
+                  ? '$mdi-folder-outline'
                   : isMarkdown(entry.name)
-                    ? 'mdi-language-markdown-outline'
-                    : 'mdi-file-outline'
+                    ? '$mdi-language-markdown-outline'
+                    : '$mdi-file-outline'
               "
               size="18"
               class="file-picker__row-icon"
@@ -283,7 +283,7 @@ onUnmounted(() => {
             <span class="file-picker__row-name">{{ entry.name }}</span>
             <v-icon
               :icon="
-                entry.is_dir ? 'mdi-chevron-right' : 'mdi-arrow-right-thin'
+                entry.is_dir ? '$mdi-chevron-right' : '$mdi-arrow-right-thin'
               "
               size="16"
               class="file-picker__row-chev"

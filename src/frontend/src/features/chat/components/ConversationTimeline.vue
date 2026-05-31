@@ -13,6 +13,10 @@ defineProps<{
   errorMessage: string | null
 }>()
 
+const emit = defineEmits<{
+  'select-seed': [prompt: string]
+}>()
+
 function sourcesFor(message: MessageRead): SourceReference[] {
   const sources = message.metadata.sources
   return Array.isArray(sources) ? (sources as SourceReference[]) : []
@@ -24,7 +28,10 @@ function sourcesFor(message: MessageRead): SourceReference[] {
     class="timeline calliope-manuscript-ruling calliope-reading-vignette"
     :class="{ 'is-empty': messages.length === 0 }"
   >
-    <EmptyState v-if="messages.length === 0 && !pending && !errorMessage" />
+    <EmptyState
+      v-if="messages.length === 0 && !pending && !errorMessage"
+      @select-seed="emit('select-seed', $event)"
+    />
 
     <template v-for="(message, index) in messages" :key="message.id">
       <!-- Gilt hairline section-break rule between every consecutive pair of turns -->

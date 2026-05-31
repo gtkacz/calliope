@@ -66,7 +66,7 @@ async function save() {
               aria-label="Edit workspace"
               @click="edit(workspace)"
             >
-              <v-icon icon="mdi-pencil-outline" size="16" />
+              <v-icon icon="$mdi-pencil-outline" size="16" />
             </button>
             <button
               type="button"
@@ -74,7 +74,7 @@ async function save() {
               aria-label="Delete workspace"
               @click="store.deleteWorkspace(workspace.id)"
             >
-              <v-icon icon="mdi-close" size="16" />
+              <v-icon icon="$mdi-close" size="16" />
             </button>
           </div>
         </li>
@@ -112,7 +112,7 @@ async function save() {
             class="workspace-root__browse"
             @click="pickerOpen = true"
           >
-            <v-icon icon="mdi-folder-search-outline" size="16" />
+            <v-icon icon="$mdi-folder-search-outline" size="16" />
             <span>Browse</span>
           </button>
         </div>

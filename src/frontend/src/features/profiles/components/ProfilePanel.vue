@@ -111,7 +111,7 @@ async function save() {
               aria-label="Edit profile"
               @click="edit(profile)"
             >
-              <v-icon icon="mdi-pencil-outline" size="16" />
+              <v-icon icon="$mdi-pencil-outline" size="16" />
             </button>
             <button
               type="button"
@@ -119,7 +119,7 @@ async function save() {
               aria-label="Test profile"
               @click="store.testProfile(profile.id)"
             >
-              <v-icon icon="mdi-connection" size="16" />
+              <v-icon icon="$mdi-connection" size="16" />
             </button>
             <button
               type="button"
@@ -127,7 +127,7 @@ async function save() {
               aria-label="Delete profile"
               @click="store.deleteProfile(profile.id)"
             >
-              <v-icon icon="mdi-close" size="16" />
+              <v-icon icon="$mdi-close" size="16" />
             </button>
           </div>
         </li>

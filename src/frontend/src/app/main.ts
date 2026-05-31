@@ -1,4 +1,3 @@
-import '@mdi/font/css/materialdesignicons.css'
 import '@fontsource-variable/fraunces'
 import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'

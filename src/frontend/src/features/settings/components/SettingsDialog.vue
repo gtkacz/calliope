@@ -68,7 +68,7 @@ onMounted(syncIndicator)
           aria-label="Close settings"
           @click="settings.close()"
         >
-          <v-icon icon="mdi-close" size="18" />
+          <v-icon icon="$mdi-close" size="18" />
         </button>
       </header>
 

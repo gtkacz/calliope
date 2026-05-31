@@ -146,7 +146,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
           aria-label="Close editor panel"
           @click="close"
         >
-          <v-icon icon="mdi-close" size="18" />
+          <v-icon icon="$mdi-close" size="18" />
         </button>
       </header>
 
@@ -167,7 +167,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
             class="editor-panel__btn editor-panel__btn--ghost"
             @click="openPicker"
           >
-            <v-icon icon="mdi-folder-open-outline" size="15" />
+            <v-icon icon="$mdi-folder-open-outline" size="15" />
             {{ loadedFile ? "Change" : "Choose file" }}
           </button>
         </div>

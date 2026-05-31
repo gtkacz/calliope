@@ -1,0 +1,61 @@
+import {
+  mdiArrowRightThin,
+  mdiArrowUp,
+  mdiBookOpenPageVariantOutline,
+  mdiChevronDown,
+  mdiChevronRight,
+  mdiClose,
+  mdiCogOutline,
+  mdiConnection,
+  mdiDeleteOutline,
+  mdiEyedropperVariant,
+  mdiFileDocumentEditOutline,
+  mdiFileDocumentOutline,
+  mdiFileOutline,
+  mdiFolderOpenOutline,
+  mdiFolderOutline,
+  mdiFolderPlusOutline,
+  mdiFolderSearchOutline,
+  mdiLanguageMarkdownOutline,
+  mdiLightbulbOutline,
+  mdiMagnify,
+  mdiPencilOutline,
+  mdiPlus,
+  mdiFeather,
+  mdiRestore,
+  mdiTextSearchVariant,
+} from '@mdi/js'
+
+/**
+ * The only Material Design icons the app actually renders. Mapping the kebab
+ * names to their @mdi/js SVG paths lets Rollup tree-shake the icon set down to
+ * these glyphs instead of shipping the full ~7000-icon webfont. Referenced in
+ * templates as `$mdi-<name>` (Vuetify alias syntax).
+ */
+export const appIconAliases: Record<string, string> = {
+  'mdi-arrow-right-thin': mdiArrowRightThin,
+  'mdi-arrow-up': mdiArrowUp,
+  'mdi-book-open-page-variant-outline': mdiBookOpenPageVariantOutline,
+  'mdi-chevron-down': mdiChevronDown,
+  'mdi-chevron-right': mdiChevronRight,
+  'mdi-close': mdiClose,
+  'mdi-cog-outline': mdiCogOutline,
+  'mdi-connection': mdiConnection,
+  'mdi-delete-outline': mdiDeleteOutline,
+  'mdi-eyedropper-variant': mdiEyedropperVariant,
+  'mdi-file-document-edit-outline': mdiFileDocumentEditOutline,
+  'mdi-file-document-outline': mdiFileDocumentOutline,
+  'mdi-file-outline': mdiFileOutline,
+  'mdi-folder-open-outline': mdiFolderOpenOutline,
+  'mdi-folder-outline': mdiFolderOutline,
+  'mdi-folder-plus-outline': mdiFolderPlusOutline,
+  'mdi-folder-search-outline': mdiFolderSearchOutline,
+  'mdi-language-markdown-outline': mdiLanguageMarkdownOutline,
+  'mdi-lightbulb-outline': mdiLightbulbOutline,
+  'mdi-magnify': mdiMagnify,
+  'mdi-pencil-outline': mdiPencilOutline,
+  'mdi-plus': mdiPlus,
+  'mdi-feather': mdiFeather,
+  'mdi-restore': mdiRestore,
+  'mdi-text-search-variant': mdiTextSearchVariant,
+}

@@ -91,7 +91,7 @@ function formatTimestamp(iso: string): string {
         block
         class="drawer-actions__new"
         color="primary"
-        prepend-icon="mdi-plus"
+        prepend-icon="$mdi-plus"
         @click="emit('new-session')"
       >
         New conversation
@@ -102,7 +102,7 @@ function formatTimestamp(iso: string): string {
       <v-text-field
         v-model="filter"
         placeholder="Filter conversations"
-        prepend-inner-icon="mdi-magnify"
+        prepend-inner-icon="$mdi-magnify"
         class="drawer-filters__input"
       />
       <div class="drawer-filters__folder">
@@ -113,7 +113,7 @@ function formatTimestamp(iso: string): string {
           @keyup.enter="createFolder"
         />
         <v-btn
-          icon="mdi-folder-plus-outline"
+          icon="$mdi-folder-plus-outline"
           variant="text"
           density="comfortable"
           size="small"
@@ -134,7 +134,7 @@ function formatTimestamp(iso: string): string {
             @click="toggleFolder(folder.id)"
           >
             <span class="drawer-folder__chevron" :class="{ 'is-open': !isCollapsed(folder.id) }">
-              <v-icon size="14" icon="mdi-chevron-right" />
+              <v-icon size="14" icon="$mdi-chevron-right" />
             </span>
             <span class="drawer-folder__name calliope-serif">{{ folder.name }}</span>
             <span class="drawer-folder__count calliope-mono">{{ sessionsForFolder(folder.id).length }}</span>
@@ -145,7 +145,7 @@ function formatTimestamp(iso: string): string {
             aria-label="Delete folder"
             @click.stop="emit('delete-folder', folder.id)"
           >
-            <v-icon size="14" icon="mdi-close" />
+            <v-icon size="14" icon="$mdi-close" />
           </button>
         </div>
 
@@ -179,7 +179,7 @@ function formatTimestamp(iso: string): string {
               aria-label="Delete conversation"
               @click.stop="emit('delete-session', session.id)"
             >
-              <v-icon size="14" icon="mdi-delete-outline" />
+              <v-icon size="14" icon="$mdi-delete-outline" />
             </button>
           </Motion>
           <li v-if="sessionsForFolder(folder.id).length === 0" class="drawer-empty calliope-mono">
@@ -220,7 +220,7 @@ function formatTimestamp(iso: string): string {
               aria-label="Delete conversation"
               @click.stop="emit('delete-session', session.id)"
             >
-              <v-icon size="14" icon="mdi-delete-outline" />
+              <v-icon size="14" icon="$mdi-delete-outline" />
             </button>
           </Motion>
           <li v-if="unfiledSessions.length === 0" class="drawer-empty calliope-mono">

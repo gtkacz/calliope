@@ -1,7 +1,7 @@
 import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import { aliases as mdiAliases, mdi } from 'vuetify/iconsets/mdi-svg'
 
+import { appIconAliases } from './icons'
 import {
   calliopeScriptorium,
   calliopeTwilight,
@@ -9,9 +9,16 @@ import {
   calliopeClassic,
 } from './theme'
 
+// Components and directives are auto-imported per-use by vite-plugin-vuetify
+// (configured in vite.config.ts), so only what the app references is bundled.
 const vuetify = createVuetify({
-  components,
-  directives,
+  icons: {
+    defaultSet: 'mdi',
+    // mdiAliases supplies Vuetify's internal icons (dropdown, clear, close…);
+    // appIconAliases adds the app's own glyphs as tree-shaken SVG paths.
+    aliases: { ...mdiAliases, ...appIconAliases },
+    sets: { mdi },
+  },
   theme: {
     defaultTheme: 'calliopeScriptorium',
     themes: {
@@ -54,14 +61,14 @@ const vuetify = createVuetify({
       density: 'comfortable',
       hideDetails: 'auto',
       color: 'primary',
-      menuIcon: 'mdi-chevron-down',
+      menuIcon: '$mdi-chevron-down',
     },
     VCombobox: {
       variant: 'plain',
       density: 'comfortable',
       hideDetails: 'auto',
       color: 'primary',
-      menuIcon: 'mdi-chevron-down',
+      menuIcon: '$mdi-chevron-down',
     },
     VAutocomplete: {
       variant: 'plain',

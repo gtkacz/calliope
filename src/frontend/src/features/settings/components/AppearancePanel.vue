@@ -208,7 +208,7 @@ onMounted(async () => {
           :style="appearance.accentHex ? { '--swatch-color': appearance.accentHex } : {}"
           @click="openColorPicker"
         >
-          <v-icon icon="mdi-eyedropper-variant" size="14" />
+          <v-icon icon="$mdi-eyedropper-variant" size="14" />
         </button>
 
         <!-- Native color input — visually hidden, triggered by the button above -->
@@ -230,7 +230,7 @@ onMounted(async () => {
           aria-label="Reset to preset accent"
           @click="appearance.setAccent(null)"
         >
-          <v-icon icon="mdi-restore" size="13" />
+          <v-icon icon="$mdi-restore" size="13" />
           Reset
         </button>
       </div>

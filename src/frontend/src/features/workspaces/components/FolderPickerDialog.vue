@@ -211,7 +211,7 @@ function onKeydown(event: KeyboardEvent): void {
           variant="plain"
           hide-details
           placeholder="Type or paste an absolute path"
-          prepend-inner-icon="mdi-text-search-variant"
+          prepend-inner-icon="$mdi-text-search-variant"
           class="folder-picker__manual-field"
           @update:model-value="onManualPathInput"
         />
@@ -223,7 +223,7 @@ function onKeydown(event: KeyboardEvent): void {
           aria-label="Go to parent folder"
           @click="goUp"
         >
-          <v-icon icon="mdi-arrow-up" size="16" />
+          <v-icon icon="$mdi-arrow-up" size="16" />
         </button>
       </div>
 
@@ -261,9 +261,9 @@ function onKeydown(event: KeyboardEvent): void {
             @click="selectEntry(entry)"
             @mouseenter="highlightIndex = idx"
           >
-            <v-icon icon="mdi-folder-outline" size="18" class="folder-picker__row-icon" />
+            <v-icon icon="$mdi-folder-outline" size="18" class="folder-picker__row-icon" />
             <span class="folder-picker__row-name">{{ entry.name }}</span>
-            <v-icon icon="mdi-chevron-right" size="16" class="folder-picker__row-chev" />
+            <v-icon icon="$mdi-chevron-right" size="16" class="folder-picker__row-chev" />
           </li>
         </ul>
 

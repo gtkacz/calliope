@@ -22,6 +22,11 @@ const startupError = ref(false);
 const startupLoading = ref(false);
 const apiBaseUrlValue = apiBaseUrl();
 const editorOpen = ref(false);
+const composerRef = ref<{ prefill: (value: string) => void } | null>(null);
+
+function applySeed(prompt: string) {
+  composerRef.value?.prefill(prompt);
+}
 
 const activeWorkspaceName = computed(() => {
   const id = chat.selectedWorkspaceId;
@@ -141,7 +146,7 @@ onMounted(loadInitialData);
             {{ activeProfileName }}
           </span>
           <v-btn
-            icon="mdi-file-document-edit-outline"
+            icon="$mdi-file-document-edit-outline"
             variant="text"
             size="small"
             density="comfortable"
@@ -151,7 +156,7 @@ onMounted(loadInitialData);
           />
           <v-btn
             class="chat-context__settings"
-            icon="mdi-cog-outline"
+            icon="$mdi-cog-outline"
             variant="text"
             size="small"
             density="comfortable"
@@ -190,10 +195,12 @@ onMounted(loadInitialData);
           :messages="chat.messages"
           :pending="chat.pending"
           :error-message="chat.errorMessage"
+          @select-seed="applySeed"
         />
       </div>
 
       <ComposerBar
+        ref="composerRef"
         v-model:mode="chat.mode"
         v-model:policy="chat.policy"
         v-model:selected-workspace-id="chat.selectedWorkspaceId"

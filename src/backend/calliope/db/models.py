@@ -228,6 +228,10 @@ class ConnectionProfile(Base):
     prefer_min_p: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
     # Nullable: operators who are happy with policy defaults leave this unset.
     sampling_override_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    # Per-profile completion ceiling. NULL inherits Settings.default_max_tokens; an
+    # explicit value lets a small-context local model and a large commercial model
+    # carry different limits without changing the global default.
+    max_tokens: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -4,13 +4,14 @@ from typing import Protocol
 
 from calliope.domain.enums import CanonPolicy, EditMode
 from calliope.domain.schemas import EditProposal, EditProposalRequest, SourceReference
+from calliope.llm.openai_compatible import ChatCompletion
 from calliope.prompts.builder import build_document_edit_messages
 from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
 from calliope.services.filesystem import FilesystemService
 
 
 class ChatClient(Protocol):
-    async def chat(self, messages: list[dict[str, str]]) -> str: ...
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion: ...
 
 
 class EditorService:
@@ -41,7 +42,7 @@ class EditorService:
             policy=policy,
             sources=sources,
         )
-        generated = self._async_runner.run(self.chat_client.chat(messages))
+        generated = self._async_runner.run(self.chat_client.chat(messages)).content
 
         if request.mode is EditMode.APPEND:
             proposed_content = current.content.rstrip("\n") + "\n\n" + generated.strip() + "\n"

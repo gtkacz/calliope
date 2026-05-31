@@ -9,6 +9,7 @@ export interface ProfilePayload {
   model: string
   api_key_ref: string | null
   capabilities: ProfileCapability[]
+  max_tokens: number | null
 }
 
 export interface ProfileTestResult {

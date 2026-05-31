@@ -16,6 +16,8 @@ const form = reactive({
   model: "",
   api_key_ref: "",
   capabilities: ["chat"] as ProfileCapability[],
+  // Held as a string for the text input; "" means "inherit the server default".
+  max_tokens: "",
 });
 
 type PresetOption = { id: string | null; label: string };
@@ -64,9 +66,12 @@ function edit(profile: Profile) {
   form.model = profile.model;
   form.api_key_ref = profile.api_key_ref ?? "";
   form.capabilities = [...profile.capabilities];
+  form.max_tokens = profile.max_tokens === null ? "" : String(profile.max_tokens);
 }
 
 async function save() {
+  const trimmedMaxTokens = form.max_tokens.trim();
+  const parsedMaxTokens = Number(trimmedMaxTokens);
   await store.saveProfile(
     {
       name: form.name,
@@ -75,6 +80,8 @@ async function save() {
       model: form.model,
       api_key_ref: form.api_key_ref.trim() === "" ? null : form.api_key_ref,
       capabilities: form.capabilities,
+      max_tokens:
+        trimmedMaxTokens === "" || Number.isNaN(parsedMaxTokens) ? null : parsedMaxTokens,
     },
     editingId.value,
   );
@@ -199,6 +206,17 @@ async function save() {
           multiple
           chips
           closable-chips
+        />
+      </div>
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Max tokens</label>
+        <v-text-field
+          v-model="form.max_tokens"
+          type="number"
+          min="1"
+          placeholder="Default (4096)"
+          hint="Longest response the model may generate. Leave blank to use the server default; raise it if write-mode documents get cut off."
+          persistent-hint
         />
       </div>
 

@@ -21,6 +21,7 @@ class ProfileRepository:
             capabilities_json=[capability.value for capability in payload.capabilities],
             prefer_min_p=payload.prefer_min_p,
             sampling_override_json=payload.sampling_override,
+            max_tokens=payload.max_tokens,
         )
         self.session.add(profile)
         try:
@@ -79,6 +80,8 @@ class ProfileRepository:
             profile.prefer_min_p = payload.prefer_min_p
         if payload.sampling_override is not None or "sampling_override" in payload.model_fields_set:
             profile.sampling_override_json = payload.sampling_override
+        if payload.max_tokens is not None or "max_tokens" in payload.model_fields_set:
+            profile.max_tokens = payload.max_tokens
         try:
             self.session.commit()
         except IntegrityError as exc:
@@ -122,5 +125,6 @@ class ProfileRepository:
             ],
             prefer_min_p=profile.prefer_min_p,
             sampling_override=profile.sampling_override_json,
+            max_tokens=profile.max_tokens,
             created_at=profile.created_at,
         )

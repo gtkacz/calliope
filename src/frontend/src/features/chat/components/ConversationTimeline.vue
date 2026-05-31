@@ -22,6 +22,10 @@ function sourcesFor(message: MessageRead): SourceReference[] {
   const sources = message.metadata.sources
   return Array.isArray(sources) ? (sources as SourceReference[]) : []
 }
+
+function truncatedFor(message: MessageRead): boolean {
+  return message.metadata.truncated === true
+}
 </script>
 
 <template>
@@ -51,6 +55,7 @@ function sourcesFor(message: MessageRead): SourceReference[] {
           :role="message.role"
           :content="message.content"
           :sources="sourcesFor(message)"
+          :truncated="truncatedFor(message)"
         />
       </Motion>
     </template>

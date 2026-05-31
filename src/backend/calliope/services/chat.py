@@ -4,6 +4,7 @@ from typing import Protocol
 
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
+from calliope.llm.openai_compatible import ChatCompletion
 from calliope.prompts.builder import (
     HistoryTurn,
     build_chat_messages,
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 
 
 class ChatClient(Protocol):
-    async def chat(self, messages: list[dict[str, str]]) -> str: ...
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion: ...
 
 
 class ChatService:
@@ -117,7 +118,8 @@ class ChatService:
             cited_documents=cited_documents or None,
             history=history,
         )
-        answer = self._async_runner.run(self.chat_client.chat(messages))
+        completion = self._async_runner.run(self.chat_client.chat(messages))
+        answer = completion.content
 
         new_session_title: str | None = None
         if request.session_id is None:
@@ -157,6 +159,7 @@ class ChatService:
                     ],
                     "cited_document_ids": [doc.document_id for doc in cited_documents],
                     "cited_paths": [doc.path for doc in cited_documents],
+                    "truncated": completion.truncated,
                 },
             )
             trace = repository.add_trace(
@@ -190,7 +193,7 @@ class ChatService:
         fallback: str,
     ) -> str:
         try:
-            raw_title = self._async_runner.run(
+            title_completion = self._async_runner.run(
                 self.chat_client.chat(
                     build_conversation_title_messages(
                         user_message=user_message,
@@ -200,7 +203,7 @@ class ChatService:
             )
         except Exception:
             return fallback
-        return _clean_generated_title(raw_title, fallback=fallback)
+        return _clean_generated_title(title_completion.content, fallback=fallback)
 
     def close(self) -> None:
         cleanup_error: Exception | None = None

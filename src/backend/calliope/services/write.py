@@ -9,6 +9,7 @@ from calliope.domain.schemas import (
     WriteRequest,
     WriteResponse,
 )
+from calliope.llm.openai_compatible import ChatCompletion
 from calliope.prompts.builder import HistoryTurn, build_write_messages
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
@@ -21,7 +22,7 @@ CANVAS_UPDATED_NOTE = "Updated the canvas."
 
 
 class ChatClient(Protocol):
-    async def chat(self, messages: list[dict[str, str]]) -> str: ...
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion: ...
 
 
 class WriteService:
@@ -121,7 +122,8 @@ class WriteService:
             cited_documents=cited_documents or None,
             history=history,
         )
-        new_canvas = self._async_runner.run(self.chat_client.chat(messages))
+        completion = self._async_runner.run(self.chat_client.chat(messages))
+        new_canvas = completion.content
 
         sources = search_response.sources
         try:
@@ -152,6 +154,7 @@ class WriteService:
                     "sources": [source.model_dump(mode="json") for source in sources],
                     "cited_document_ids": [doc.document_id for doc in cited_documents],
                     "cited_paths": [doc.path for doc in cited_documents],
+                    "truncated": completion.truncated,
                 },
             )
             trace = repository.add_trace(

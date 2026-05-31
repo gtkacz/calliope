@@ -12,6 +12,7 @@ const props = defineProps<{
   role: string
   content: string
   sources?: SourceReference[]
+  truncated?: boolean
 }>()
 
 const viewer = useSourceViewerStore()
@@ -68,6 +69,13 @@ function onContentClick(event: MouseEvent) {
       @click="onContentClick"
       v-html="renderedContent"
     />
+    <div v-if="truncated" class="assistant-turn__notice" role="status">
+      <span class="calliope-eyebrow assistant-turn__notice-label">Truncated</span>
+      <p class="assistant-turn__notice-body">
+        This response hit the model's length limit and may be cut off. Raise
+        <strong>Max tokens</strong> for this profile in Settings to generate the full document.
+      </p>
+    </div>
     <div v-if="sources && sources.length > 0" class="assistant-turn__sources">
       <span class="calliope-eyebrow assistant-turn__sources-label">Sources</span>
       <div class="assistant-turn__source-list">
@@ -408,6 +416,36 @@ function onContentClick(event: MouseEvent) {
   font-size: 0.82em;
   color: var(--calliope-paper-muted);
   font-style: italic;
+}
+
+.assistant-turn__notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: var(--calliope-space-2xs);
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--calliope-bronze-glow);
+  border-left: 2px solid var(--calliope-bronze);
+  border-radius: var(--calliope-radius-md);
+  background: var(--calliope-bronze-veil);
+}
+
+.assistant-turn__notice-label {
+  color: var(--calliope-bronze);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+}
+
+.assistant-turn__notice-body {
+  margin: 0;
+  color: var(--calliope-paper-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.assistant-turn__notice-body strong {
+  color: var(--calliope-paper);
+  font-weight: 600;
 }
 
 .assistant-turn__sources {

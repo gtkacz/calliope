@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -10,9 +11,21 @@ from calliope.llm.sampling import SamplingParams
 logger = logging.getLogger(__name__)
 
 # OpenAI-compatible finish_reason emitted when generation stopped at the token
-# ceiling rather than a natural end. Surfaced as a warning because the truncated
-# content is otherwise indistinguishable from a complete response.
+# ceiling rather than a natural end. Surfaced because the truncated content is
+# otherwise indistinguishable from a complete response.
 _FINISH_REASON_LENGTH = "length"
+
+
+@dataclass(frozen=True)
+class ChatCompletion:
+    """A chat generation plus the one piece of response metadata callers act on.
+
+    `truncated` carries the finish_reason=length signal up to the service layer so
+    a cut-off document can be flagged to the writer, rather than being silently
+    stored as if complete."""
+
+    content: str
+    truncated: bool = False
 
 
 def verify_embedding_dimension(
@@ -83,7 +96,7 @@ class OpenAICompatibleClient:
         data = response.json()
         return data["data"][0]["embedding"]
 
-    async def chat(self, messages: list[dict[str, Any]]) -> str:
+    async def chat(self, messages: list[dict[str, Any]]) -> ChatCompletion:
         payload: dict[str, Any] = {"model": self.model, "messages": messages}
         if self.sampling_params is not None:
             p = self.sampling_params
@@ -108,15 +121,16 @@ class OpenAICompatibleClient:
 
         data = response.json()
         choice = data["choices"][0]
-        if choice.get("finish_reason") == _FINISH_REASON_LENGTH:
+        truncated = choice.get("finish_reason") == _FINISH_REASON_LENGTH
+        if truncated:
             logger.warning(
                 "generation hit the token ceiling (finish_reason=length, max_tokens=%s, "
                 "model=%s); the response is truncated. Raise CALLIOPE_DEFAULT_MAX_TOKENS "
-                "if documents are being cut off.",
+                "or the profile's max_tokens if documents are being cut off.",
                 payload.get("max_tokens"),
                 self.model,
             )
-        return choice["message"]["content"]
+        return ChatCompletion(content=choice["message"]["content"], truncated=truncated)
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}

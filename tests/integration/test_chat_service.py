@@ -7,6 +7,7 @@ from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.domain.enums import CanonPolicy
 from calliope.domain.schemas import ChatRequest, SourceReference, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.llm.openai_compatible import ChatCompletion
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.workspaces import WorkspaceRepository
@@ -22,19 +23,19 @@ class FakeEmbeddingClient:
 
 
 class FakeChatClient:
-    async def chat(self, messages: list[dict[str, str]]) -> str:
-        return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion:
+        return ChatCompletion(content="Kaelen was exiled from Velmora. [characters/kaelen.md]")
 
 
 class RecordingTitleChatClient:
     def __init__(self) -> None:
         self.calls: list[list[dict[str, str]]] = []
 
-    async def chat(self, messages: list[dict[str, str]]) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion:
         self.calls.append(messages)
         if len(self.calls) == 1:
-            return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
-        return '"Kaelen Exile"'
+            return ChatCompletion(content="Kaelen was exiled from Velmora. [characters/kaelen.md]")
+        return ChatCompletion(content='"Kaelen Exile"')
 
 
 def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> None:
@@ -230,9 +231,9 @@ class LoopRecordingChatClient:
         self._record_loop()
         return [0.1] * EMBEDDING_DIMENSIONS
 
-    async def chat(self, messages: list[dict[str, str]]) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion:
         self._record_loop()
-        return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+        return ChatCompletion(content="Kaelen was exiled from Velmora. [characters/kaelen.md]")
 
     def _record_loop(self) -> None:
         loop = asyncio.get_running_loop()

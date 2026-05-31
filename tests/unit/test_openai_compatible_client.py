@@ -41,7 +41,8 @@ async def test_chat_returns_message_content() -> None:
 
     answer = await client.chat([{"role": "user", "content": "Who is Kaelen?"}])
 
-    assert answer == "Grounded answer"
+    assert answer.content == "Grounded answer"
+    assert answer.truncated is False
 
 
 @pytest.mark.asyncio

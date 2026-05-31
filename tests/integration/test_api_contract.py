@@ -11,6 +11,7 @@ from calliope.config import EMBEDDING_DIMENSIONS, Settings
 from calliope.domain.enums import ProfileCapability, ProfileKind
 from calliope.domain.schemas import ChatRequest, ProfileCreate, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.llm.openai_compatible import ChatCompletion
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.profiles import ProfileRepository
 from calliope.repositories.workspaces import WorkspaceRepository
@@ -42,9 +43,9 @@ class FakeOpenAICompatibleClient:
         value = 1.0 if "Kaelen" in text else 0.1
         return [value] * EMBEDDING_DIMENSIONS
 
-    async def chat(self, messages: list[dict[str, str]]) -> str:
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion:
         self.chat_models.append(self.model)
-        return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+        return ChatCompletion(content="Kaelen was exiled from Velmora. [characters/kaelen.md]")
 
     async def aclose(self) -> None:
         return None

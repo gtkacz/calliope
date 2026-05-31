@@ -9,5 +9,6 @@ export interface Profile {
   model: string
   api_key_ref: string | null
   capabilities: ProfileCapability[]
+  max_tokens: number | null
   created_at: string
 }

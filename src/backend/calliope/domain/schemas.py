@@ -94,6 +94,7 @@ class ProfileCreate(BaseModel):
     capabilities: list[ProfileCapability]
     prefer_min_p: bool = True
     sampling_override: dict[str, Any] | None = None
+    max_tokens: int | None = None
 
 
 class ProfilePatch(BaseModel):
@@ -105,6 +106,7 @@ class ProfilePatch(BaseModel):
     capabilities: list[ProfileCapability] | None = None
     prefer_min_p: bool | None = None
     sampling_override: dict[str, Any] | None = None
+    max_tokens: int | None = None
 
 
 class ProfileRead(ProfileCreate):

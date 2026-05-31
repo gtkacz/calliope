@@ -164,35 +164,54 @@ onMounted(loadInitialData);
             <span class="chat-context__profile-dot" aria-hidden="true">●</span>
             {{ activeProfileName }}
           </span>
-          <v-btn
-            icon="$mdi-file-document-edit-outline"
-            variant="text"
-            size="small"
-            density="comfortable"
-            color="default"
-            aria-label="Edit a file"
-            @click="editorOpen = true"
-          />
-          <v-btn
+          <v-tooltip text="Open a document to edit in the canvas" location="bottom" :open-delay="200">
+            <template #activator="{ props: tipProps }">
+              <v-btn
+                v-bind="tipProps"
+                icon="$mdi-file-document-edit-outline"
+                variant="text"
+                size="small"
+                density="comfortable"
+                color="default"
+                aria-label="Edit a file"
+                @click="editorOpen = true"
+              />
+            </template>
+          </v-tooltip>
+          <v-tooltip
             v-if="chat.mode === 'write'"
-            :icon="threadOpen ? '$mdi-close' : '$mdi-pencil-outline'"
-            variant="text"
-            size="small"
-            density="comfortable"
-            color="default"
-            :aria-label="threadOpen ? 'Hide iteration thread' : 'Show iteration thread'"
-            @click="threadOpen = !threadOpen"
-          />
-          <v-btn
-            class="chat-context__settings"
-            icon="$mdi-cog-outline"
-            variant="text"
-            size="small"
-            density="comfortable"
-            color="default"
-            aria-label="Settings"
-            @click="settings.show()"
-          />
+            :text="threadOpen ? 'Hide the iteration thread' : 'Show the iteration thread'"
+            location="bottom"
+            :open-delay="200"
+          >
+            <template #activator="{ props: tipProps }">
+              <v-btn
+                v-bind="tipProps"
+                :icon="threadOpen ? '$mdi-close' : '$mdi-pencil-outline'"
+                variant="text"
+                size="small"
+                density="comfortable"
+                color="default"
+                :aria-label="threadOpen ? 'Hide iteration thread' : 'Show iteration thread'"
+                @click="threadOpen = !threadOpen"
+              />
+            </template>
+          </v-tooltip>
+          <v-tooltip text="Open settings" location="bottom" :open-delay="200">
+            <template #activator="{ props: tipProps }">
+              <v-btn
+                v-bind="tipProps"
+                class="chat-context__settings"
+                icon="$mdi-cog-outline"
+                variant="text"
+                size="small"
+                density="comfortable"
+                color="default"
+                aria-label="Settings"
+                @click="settings.show()"
+              />
+            </template>
+          </v-tooltip>
         </div>
       </header>
 
@@ -235,6 +254,7 @@ onMounted(loadInitialData);
             <WriteThread
               :messages="chat.messages"
               :pending="chat.pending"
+              :pending-since="chat.pendingSince"
               :error-message="chat.errorMessage"
             />
           </aside>
@@ -244,6 +264,7 @@ onMounted(loadInitialData);
           v-else
           :messages="chat.messages"
           :pending="chat.pending"
+          :pending-since="chat.pendingSince"
           :error-message="chat.errorMessage"
           @select-seed="applySeed"
         />

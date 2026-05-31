@@ -2,7 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { useAppearanceStore } from '../stores/appearanceStore'
-import { CHAT_FONTS, DEFAULT_CHAT_FONT_ID, DEFAULT_DISPLAY_FONT_ID, DISPLAY_FONTS, type FontOption } from '../displayFonts'
+import { DEFAULT_CHAT_FONT_ID, DEFAULT_DISPLAY_FONT_ID, type FontOption } from '../displayFonts'
+import { FONT_CATEGORIES, FONT_SLOTS, type FontCategory, type FontSlot } from '../customFonts'
 import { PRESETS, type PresetId, type TypeScale, type Density } from '@/app/tokens'
 import { ensureFontsLoaded } from '@/composables/useDecorativeFonts'
 
@@ -66,7 +67,7 @@ interface FontSection {
   title: string
   hint: string
   ariaLabel: string
-  options: readonly FontOption[]
+  options: () => readonly FontOption[]
   activeId: () => string
   select: (id: string) => void
 }
@@ -76,7 +77,7 @@ const fontSections: FontSection[] = [
     title: 'Display font',
     hint: 'Used for headlines, workspace titles, and editorial accents across the studio.',
     ariaLabel: 'Display font',
-    options: DISPLAY_FONTS,
+    options: () => appearance.displayFontOptions,
     activeId: () => appearance.displayFontId,
     select: (id) => {
       ensureFontsLoaded([id])
@@ -87,7 +88,7 @@ const fontSections: FontSection[] = [
     title: 'Chat font',
     hint: 'Used for the prose inside chat messages — your turns and Calliope’s replies.',
     ariaLabel: 'Chat font',
-    options: CHAT_FONTS,
+    options: () => appearance.chatFontOptions,
     activeId: () => appearance.chatFontId,
     select: (id) => {
       ensureFontsLoaded([id])
@@ -95,6 +96,42 @@ const fontSections: FontSection[] = [
     },
   },
 ]
+
+// ─── Custom fonts ──────────────────────────────────────────────────────────────
+
+const customUrl = ref('')
+const customFamily = ref('')
+const customCategory = ref<FontCategory>('sans-serif')
+const customSlot = ref<FontSlot>('display')
+const customError = ref<string | null>(null)
+
+function isCustomOption(id: string): boolean {
+  return appearance.customFonts.some((font) => font.id === id)
+}
+
+function submitCustomFont() {
+  customError.value = null
+  try {
+    appearance.addCustomFont({
+      family: customFamily.value,
+      category: customCategory.value,
+      slot: customSlot.value,
+      importUrl: customUrl.value,
+    })
+    customUrl.value = ''
+    customFamily.value = ''
+    // Re-confirm font readiness so the new preview un-fades once the browser parses it.
+    document.fonts.ready.then(() => {
+      fontsReady.value = true
+    })
+  } catch (error) {
+    customError.value = error instanceof Error ? error.message : 'Could not add font.'
+  }
+}
+
+function slotLabel(slot: FontSlot): string {
+  return slot === 'display' ? 'Display' : 'Chat'
+}
 
 // ─── Font loading guard ───────────────────────────────────────────────────────
 
@@ -306,7 +343,7 @@ onMounted(async () => {
 
       <div class="font-grid" role="radiogroup" :aria-label="section.ariaLabel">
         <button
-          v-for="font in section.options"
+          v-for="font in section.options()"
           :key="font.id"
           type="button"
           role="radio"
@@ -318,12 +355,126 @@ onMounted(async () => {
           }"
           @click="section.select(font.id)"
         >
+          <span
+            v-if="isCustomOption(font.id)"
+            class="font-option__tag calliope-mono"
+          >Custom</span>
           <span class="font-option__sample" :style="{ fontFamily: font.stack }">
             Calliope
           </span>
           <span class="font-option__label">{{ font.label }}</span>
         </button>
       </div>
+    </section>
+
+    <!-- ── Custom fonts (add your own Google Font) ────────────────────── -->
+    <section class="panel-form font-section">
+      <header class="panel-form__head">
+        <span class="calliope-eyebrow">Fonts</span>
+        <h3 class="panel-form__title calliope-serif">Custom fonts</h3>
+        <p class="panel-field__hint">
+          Add any Google Font: paste its embed import URL, type the family name,
+          choose a fallback category and which picker it joins. Saved to this browser.
+        </p>
+      </header>
+
+      <form class="custom-font-form" @submit.prevent="submitCustomFont">
+        <v-text-field
+          v-model="customUrl"
+          placeholder="https://fonts.googleapis.com/css2?family=…"
+          label="Import URL"
+          variant="outlined"
+          density="compact"
+          hide-details
+          class="custom-font-form__field"
+        />
+        <v-text-field
+          v-model="customFamily"
+          placeholder="e.g. Inter"
+          label="Font family"
+          variant="outlined"
+          density="compact"
+          hide-details
+          class="custom-font-form__field"
+        />
+
+        <div class="custom-font-form__row">
+          <div class="custom-font-form__group">
+            <span class="calliope-eyebrow custom-font-form__group-label">Category</span>
+            <div class="segmented-control" role="radiogroup" aria-label="Fallback category">
+              <button
+                v-for="category in FONT_CATEGORIES"
+                :key="category"
+                type="button"
+                role="radio"
+                :aria-checked="customCategory === category"
+                class="segmented-control__option"
+                :class="{ 'is-active': customCategory === category }"
+                @click="customCategory = category"
+              >
+                {{ category }}
+              </button>
+            </div>
+          </div>
+
+          <div class="custom-font-form__group">
+            <span class="calliope-eyebrow custom-font-form__group-label">Slot</span>
+            <div class="segmented-control" role="radiogroup" aria-label="Target slot">
+              <button
+                v-for="slot in FONT_SLOTS"
+                :key="slot"
+                type="button"
+                role="radio"
+                :aria-checked="customSlot === slot"
+                class="segmented-control__option"
+                :class="{ 'is-active': customSlot === slot }"
+                @click="customSlot = slot"
+              >
+                {{ slotLabel(slot) }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="customError" class="custom-font-form__error calliope-mono">
+          {{ customError }}
+        </p>
+
+        <div class="custom-font-form__actions">
+          <v-btn
+            type="submit"
+            variant="flat"
+            color="primary"
+            prepend-icon="$mdi-plus"
+            :disabled="customFamily.trim().length === 0 || customUrl.trim().length === 0"
+          >
+            Add font
+          </v-btn>
+        </div>
+      </form>
+
+      <ul v-if="appearance.customFonts.length > 0" class="custom-font-list">
+        <li
+          v-for="font in appearance.customFonts"
+          :key="font.id"
+          class="custom-font-item"
+        >
+          <span class="custom-font-item__sample" :style="{ fontFamily: `'${font.family}', ${font.category}` }">
+            {{ font.family }}
+          </span>
+          <span class="custom-font-item__meta calliope-mono">
+            {{ font.category }} · {{ slotLabel(font.slot) }}
+          </span>
+          <button
+            type="button"
+            class="custom-font-item__delete"
+            :aria-label="`Remove ${font.family}`"
+            @click="appearance.removeCustomFont(font.id)"
+          >
+            <v-icon size="16" icon="$mdi-delete-outline" />
+          </button>
+        </li>
+      </ul>
     </section>
 
     <!-- ── 6. Live preview well ───────────────────────────────────────── -->
@@ -653,6 +804,116 @@ onMounted(async () => {
 
 .font-option__button.is-active .font-option__label {
   color: var(--calliope-paper-muted);
+}
+
+.font-option__tag {
+  position: absolute;
+  bottom: 0.6rem;
+  right: 0.6rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--calliope-bronze);
+  background: var(--calliope-bronze-veil);
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-pill);
+  padding: 1px 6px;
+}
+
+/* ─── Custom font form + list ───────────────────────────────────────────────── */
+
+.custom-font-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calliope-space-sm);
+}
+
+.custom-font-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--calliope-space-md);
+}
+
+.custom-font-form__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--calliope-space-2xs);
+}
+
+.custom-font-form__group-label {
+  color: var(--calliope-paper-dim);
+}
+
+.custom-font-form__error {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--calliope-warm-error);
+}
+
+.custom-font-form__actions {
+  display: flex;
+}
+
+.custom-font-list {
+  list-style: none;
+  margin: var(--calliope-space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--calliope-space-2xs);
+}
+
+.custom-font-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: var(--calliope-space-sm);
+  padding: var(--calliope-space-xs) var(--calliope-space-sm);
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-md);
+}
+
+.custom-font-item__sample {
+  font-size: 1.05rem;
+  color: var(--calliope-paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.custom-font-item__meta {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: var(--calliope-paper-dim);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.custom-font-item__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--calliope-paper-dim);
+  border-radius: var(--calliope-radius-sm);
+  cursor: pointer;
+  transition:
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.custom-font-item__delete:hover {
+  background: var(--calliope-overlay-hover);
+  color: var(--calliope-warm-error);
+}
+
+.custom-font-item__delete:focus-visible {
+  outline: 2px solid var(--calliope-bronze);
+  outline-offset: 2px;
 }
 
 /* ─── Live preview well ─────────────────────────────────────────────────────── */

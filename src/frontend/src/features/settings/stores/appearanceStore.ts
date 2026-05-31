@@ -1,13 +1,21 @@
 import { defineStore } from 'pinia'
 
 import {
+  CHAT_FONTS,
+  DISPLAY_FONTS,
   DEFAULT_CHAT_FONT_ID,
   DEFAULT_DISPLAY_FONT_ID,
-  findChatFont,
-  findDisplayFont,
   type FontOption,
 } from '../displayFonts'
-import { ensureFontsLoaded } from '@/composables/useDecorativeFonts'
+import {
+  customFontToOption,
+  makeCustomFontId,
+  parseGoogleFontsImport,
+  type CustomFont,
+  type FontCategory,
+  type FontSlot,
+} from '../customFonts'
+import { ensureFontsLoaded, injectFontStylesheet } from '@/composables/useDecorativeFonts'
 import {
   PRESETS,
   TYPE_SCALE_ROOT_PX,
@@ -24,6 +32,7 @@ const PALETTE_STORAGE_KEY = 'calliope.appearance.palette'
 const ACCENT_STORAGE_KEY = 'calliope.appearance.accentHex'
 const TYPE_SCALE_STORAGE_KEY = 'calliope.appearance.typeScale'
 const DENSITY_STORAGE_KEY = 'calliope.appearance.density'
+const CUSTOM_FONTS_STORAGE_KEY = 'calliope.appearance.customFonts'
 
 const DISPLAY_CSS_VAR = '--calliope-font-display'
 const CHAT_CSS_VAR = '--calliope-font-chat'
@@ -35,6 +44,32 @@ interface AppearanceState {
   accentHex: string | null
   typeScale: TypeScale
   density: Density
+  customFonts: CustomFont[]
+}
+
+function isCustomFont(value: unknown): value is CustomFont {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.id === 'string' &&
+    typeof candidate.family === 'string' &&
+    typeof candidate.category === 'string' &&
+    typeof candidate.slot === 'string' &&
+    typeof candidate.importUrl === 'string'
+  )
+}
+
+function readCustomFonts(): CustomFont[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(CUSTOM_FONTS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter(isCustomFont)
+  } catch {
+    return []
+  }
 }
 
 function readStored(key: string, fallback: string): string {
@@ -142,13 +177,32 @@ export const useAppearanceStore = defineStore('appearance', {
     accentHex: null,
     typeScale: 'cozy',
     density: 'default',
+    customFonts: [],
   }),
   getters: {
-    displayFont(state): FontOption {
-      return findDisplayFont(state.displayFontId)
+    // Built-in catalog plus any user-added custom fonts targeting each slot.
+    displayFontOptions(state): FontOption[] {
+      const custom = state.customFonts
+        .filter((font) => font.slot === 'display')
+        .map(customFontToOption)
+      return [...DISPLAY_FONTS, ...custom]
     },
-    chatFont(state): FontOption {
-      return findChatFont(state.chatFontId)
+    chatFontOptions(state): FontOption[] {
+      const custom = state.customFonts
+        .filter((font) => font.slot === 'chat')
+        .map(customFontToOption)
+      return [...CHAT_FONTS, ...custom]
+    },
+    displayFont(): FontOption {
+      return (
+        this.displayFontOptions.find((option) => option.id === this.displayFontId) ??
+        DISPLAY_FONTS[0]
+      )
+    },
+    chatFont(): FontOption {
+      return (
+        this.chatFontOptions.find((option) => option.id === this.chatFontId) ?? CHAT_FONTS[0]
+      )
     },
   },
   actions: {
@@ -171,6 +225,13 @@ export const useAppearanceStore = defineStore('appearance', {
       // Apply palette + type scale + density before paint so there is no FOUC.
       this._apply()
 
+      // Load custom fonts and inject their stylesheets before resolving the saved
+      // slot selections, so a stored custom id resolves to its stack on boot.
+      this.customFonts = readCustomFonts()
+      for (const font of this.customFonts) {
+        injectFontStylesheet(font.importUrl)
+      }
+
       const displayId = readStored(DISPLAY_STORAGE_KEY, DEFAULT_DISPLAY_FONT_ID)
       const chatId = readStored(CHAT_STORAGE_KEY, DEFAULT_CHAT_FONT_ID)
 
@@ -187,17 +248,59 @@ export const useAppearanceStore = defineStore('appearance', {
     },
 
     setDisplayFont(id: string) {
-      const font = findDisplayFont(id)
+      const font =
+        this.displayFontOptions.find((option) => option.id === id) ?? DISPLAY_FONTS[0]
       this.displayFontId = font.id
       applyVariable(DISPLAY_CSS_VAR, font.stack)
       writeStored(DISPLAY_STORAGE_KEY, font.id)
     },
 
     setChatFont(id: string) {
-      const font = findChatFont(id)
+      const font = this.chatFontOptions.find((option) => option.id === id) ?? CHAT_FONTS[0]
       this.chatFontId = font.id
       applyVariable(CHAT_CSS_VAR, font.stack)
       writeStored(CHAT_STORAGE_KEY, font.id)
+    },
+
+    addCustomFont(input: {
+      family: string
+      category: FontCategory
+      slot: FontSlot
+      importUrl: string
+    }): CustomFont {
+      const family = input.family.trim()
+      if (family.length === 0) {
+        throw new Error('Enter a font family name.')
+      }
+      const importUrl = parseGoogleFontsImport(input.importUrl)
+      if (importUrl === null) {
+        throw new Error('Enter a valid Google Fonts import URL (fonts.googleapis.com).')
+      }
+
+      const font: CustomFont = {
+        id: makeCustomFontId(family),
+        family,
+        category: input.category,
+        slot: input.slot,
+        importUrl,
+      }
+      this.customFonts = [...this.customFonts, font]
+      writeStored(CUSTOM_FONTS_STORAGE_KEY, JSON.stringify(this.customFonts))
+      injectFontStylesheet(importUrl)
+      return font
+    },
+
+    removeCustomFont(id: string) {
+      this.customFonts = this.customFonts.filter((font) => font.id !== id)
+      writeStored(CUSTOM_FONTS_STORAGE_KEY, JSON.stringify(this.customFonts))
+
+      // If the removed font was the active selection for a slot, fall back to default.
+      if (this.displayFontId === id) {
+        this.setDisplayFont(DEFAULT_DISPLAY_FONT_ID)
+      }
+      if (this.chatFontId === id) {
+        this.setChatFont(DEFAULT_CHAT_FONT_ID)
+      }
     },
 
     setPalette(id: PresetId) {

@@ -112,15 +112,20 @@ function formatTimestamp(iso: string): string {
           class="drawer-filters__input"
           @keyup.enter="createFolder"
         />
-        <v-btn
-          icon="$mdi-folder-plus-outline"
-          variant="text"
-          density="comfortable"
-          size="small"
-          color="default"
-          aria-label="Create folder"
-          @click="createFolder"
-        />
+        <v-tooltip text="Group conversations into a folder" location="top" :open-delay="200">
+          <template #activator="{ props: tipProps }">
+            <v-btn
+              v-bind="tipProps"
+              icon="$mdi-folder-plus-outline"
+              variant="text"
+              density="comfortable"
+              size="small"
+              color="default"
+              aria-label="Create folder"
+              @click="createFolder"
+            />
+          </template>
+        </v-tooltip>
       </div>
     </div>
 
@@ -139,14 +144,19 @@ function formatTimestamp(iso: string): string {
             <span class="drawer-folder__name calliope-serif">{{ folder.name }}</span>
             <span class="drawer-folder__count calliope-mono">{{ sessionsForFolder(folder.id).length }}</span>
           </button>
-          <button
-            type="button"
-            class="drawer-folder__delete"
-            aria-label="Delete folder"
-            @click.stop="emit('delete-folder', folder.id)"
-          >
-            <v-icon size="14" icon="$mdi-close" />
-          </button>
+          <v-tooltip text="Delete this folder" location="top" :open-delay="200">
+            <template #activator="{ props: tipProps }">
+              <button
+                v-bind="tipProps"
+                type="button"
+                class="drawer-folder__delete"
+                aria-label="Delete folder"
+                @click.stop="emit('delete-folder', folder.id)"
+              >
+                <v-icon size="16" icon="$mdi-close" />
+              </button>
+            </template>
+          </v-tooltip>
         </div>
 
         <ul v-if="!isCollapsed(folder.id)" class="drawer-sessions">
@@ -173,14 +183,19 @@ function formatTimestamp(iso: string): string {
                 formatTimestamp(session.updated_at)
               }}</span>
             </button>
-            <button
-              type="button"
-              class="drawer-session__delete"
-              aria-label="Delete conversation"
-              @click.stop="emit('delete-session', session.id)"
-            >
-              <v-icon size="14" icon="$mdi-delete-outline" />
-            </button>
+            <v-tooltip text="Delete this conversation" location="top" :open-delay="200">
+              <template #activator="{ props: tipProps }">
+                <button
+                  v-bind="tipProps"
+                  type="button"
+                  class="drawer-session__delete"
+                  aria-label="Delete conversation"
+                  @click.stop="emit('delete-session', session.id)"
+                >
+                  <v-icon size="16" icon="$mdi-delete-outline" />
+                </button>
+              </template>
+            </v-tooltip>
           </Motion>
           <li v-if="sessionsForFolder(folder.id).length === 0" class="drawer-empty calliope-mono">
             Empty folder
@@ -214,14 +229,19 @@ function formatTimestamp(iso: string): string {
                 formatTimestamp(session.updated_at)
               }}</span>
             </button>
-            <button
-              type="button"
-              class="drawer-session__delete"
-              aria-label="Delete conversation"
-              @click.stop="emit('delete-session', session.id)"
-            >
-              <v-icon size="14" icon="$mdi-delete-outline" />
-            </button>
+            <v-tooltip text="Delete this conversation" location="top" :open-delay="200">
+              <template #activator="{ props: tipProps }">
+                <button
+                  v-bind="tipProps"
+                  type="button"
+                  class="drawer-session__delete"
+                  aria-label="Delete conversation"
+                  @click.stop="emit('delete-session', session.id)"
+                >
+                  <v-icon size="16" icon="$mdi-delete-outline" />
+                </button>
+              </template>
+            </v-tooltip>
           </Motion>
           <li v-if="unfiledSessions.length === 0" class="drawer-empty calliope-mono">
             No conversations yet
@@ -358,7 +378,15 @@ function formatTimestamp(iso: string): string {
   padding-bottom: 0;
 }
 
+/* Center the search glyph against the 34px field and pin a size that fits it,
+   overriding Vuetify's default top padding (meant for floating labels we don't use). */
+.drawer-filters__input :deep(.v-field__prepend-inner) {
+  align-items: center;
+  padding-top: 0;
+}
+
 .drawer-filters__input :deep(.v-field__prepend-inner .v-icon) {
+  font-size: 18px;
   color: var(--calliope-paper-dim);
   opacity: 0.85;
 }
@@ -385,6 +413,10 @@ function formatTimestamp(iso: string): string {
 /* The create-folder button echoes the inputs it sits beside: a bordered, hoverable
    affordance rather than a borderless glyph that looks like decoration. */
 .drawer-filters__folder :deep(.v-btn) {
+  /* Square the button to the 34px input it sits beside so heights match. */
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   border: 1px solid var(--calliope-border);
   border-radius: var(--calliope-radius-md);
   color: var(--calliope-paper-muted);
@@ -392,6 +424,10 @@ function formatTimestamp(iso: string): string {
     border-color var(--calliope-duration-fast) var(--calliope-ease-out),
     color var(--calliope-duration-fast) var(--calliope-ease-out),
     background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.drawer-filters__folder :deep(.v-btn .v-icon) {
+  font-size: 18px;
 }
 
 .drawer-filters__folder :deep(.v-btn:hover) {

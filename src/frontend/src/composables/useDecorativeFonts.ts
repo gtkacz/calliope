@@ -60,3 +60,22 @@ export function ensureFontsLoaded(fontIds: string[]): Promise<void> {
 
   return document.fonts.ready.then(() => undefined)
 }
+
+const injectedStylesheets = new Set<string>()
+
+/**
+ * Injects a single stylesheet <link> for an arbitrary (already validated) font
+ * import URL — used by user-added custom fonts, whose URLs are not known to the
+ * built-in GOOGLE_FONTS_MAP. The module-level Set keeps this idempotent across
+ * store re-initialisation and repeated add calls.
+ */
+export function injectFontStylesheet(href: string): void {
+  if (typeof document === 'undefined') return
+  if (injectedStylesheets.has(href)) return
+  injectedStylesheets.add(href)
+
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}

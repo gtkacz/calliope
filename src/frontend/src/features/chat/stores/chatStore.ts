@@ -21,6 +21,7 @@ interface ChatState {
   selectedWorkspaceId: string | null;
   selectedChatProfileId: string | null;
   pending: boolean;
+  pendingSince: number | null;
   errorMessage: string | null;
   mentionDocuments: DocumentSummary[];
   citedDocumentIds: string[];
@@ -38,6 +39,7 @@ export const useChatStore = defineStore("chat", {
     selectedWorkspaceId: null,
     selectedChatProfileId: null,
     pending: false,
+    pendingSince: null,
     errorMessage: null,
     mentionDocuments: [],
     citedDocumentIds: [],
@@ -95,6 +97,7 @@ export const useChatStore = defineStore("chat", {
       const trimmed = text.trim();
       if (trimmed.length === 0 || !this.canSubmit) return;
       this.pending = true;
+      this.pendingSince = Date.now();
       this.errorMessage = null;
       try {
         if (this.mode === "chat") {
@@ -157,6 +160,7 @@ export const useChatStore = defineStore("chat", {
           error instanceof Error ? error.message : "Request failed.";
       } finally {
         this.pending = false;
+        this.pendingSince = null;
       }
     },
     upsertSession(session: SessionSummary) {

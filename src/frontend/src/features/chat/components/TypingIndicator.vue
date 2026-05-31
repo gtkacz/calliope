@@ -1,4 +1,57 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+
+const props = defineProps<{
+  // Epoch milliseconds when the current request began; null when idle.
+  since?: number | null
+}>()
+
+// A reactive clock that only ticks while a request is in flight. Decoupling the
+// tick source from the prop lets the formatted value update ~10×/sec without the
+// parent re-rendering.
+const now = ref(Date.now())
+let intervalId: ReturnType<typeof setInterval> | null = null
+
+function stopTicking() {
+  if (intervalId !== null) {
+    clearInterval(intervalId)
+    intervalId = null
+  }
+}
+
+function startTicking() {
+  stopTicking()
+  now.value = Date.now()
+  intervalId = setInterval(() => {
+    now.value = Date.now()
+  }, 100)
+}
+
+watch(
+  () => props.since,
+  (value) => {
+    if (typeof value === 'number') {
+      startTicking()
+    } else {
+      stopTicking()
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(stopTicking)
+
+const elapsedLabel = computed(() => {
+  if (typeof props.since !== 'number') return ''
+  const elapsedMs = Math.max(0, now.value - props.since)
+  if (elapsedMs < 60_000) {
+    return `${(elapsedMs / 1000).toFixed(1)}s`
+  }
+  const totalSeconds = Math.floor(elapsedMs / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+})
 </script>
 
 <template>
@@ -9,6 +62,11 @@
       <span class="typing-indicator__dot" />
       <span class="typing-indicator__dot" />
     </span>
+    <span
+      v-if="elapsedLabel"
+      class="typing-indicator__elapsed calliope-mono"
+      aria-hidden="true"
+    >{{ elapsedLabel }}</span>
   </div>
 </template>
 
@@ -29,6 +87,14 @@
   display: inline-flex;
   align-items: flex-end;
   gap: 0.32rem;
+}
+
+.typing-indicator__elapsed {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--calliope-paper-dim);
+  /* Fixed-width feel so the ticking decimal does not jitter neighbouring layout */
+  font-variant-numeric: tabular-nums;
 }
 
 .typing-indicator__dot {

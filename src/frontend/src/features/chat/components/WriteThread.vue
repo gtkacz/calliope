@@ -7,6 +7,7 @@ import TypingIndicator from "./TypingIndicator.vue";
 defineProps<{
   messages: MessageRead[];
   pending: boolean;
+  pendingSince: number | null;
   errorMessage: string | null;
 }>();
 
@@ -39,7 +40,7 @@ function sourcesFor(message: MessageRead): SourceReference[] {
       </template>
 
       <div v-if="pending" class="write-thread__row">
-        <TypingIndicator />
+        <TypingIndicator :since="pendingSince" />
       </div>
 
       <div v-if="errorMessage" class="write-thread__error">

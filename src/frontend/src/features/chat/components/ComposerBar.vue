@@ -80,6 +80,29 @@ const policyOptions: {
   },
 ];
 
+// Composer modes. Tooltips explain what each mode does for newcomers.
+const modeOptions: {
+  value: ComposerMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "chat",
+    label: "Chat",
+    description: "Ask questions and converse, grounded in your indexed notes.",
+  },
+  {
+    value: "search",
+    label: "Search",
+    description: "Find passages in your notes — retrieval only, no generated reply.",
+  },
+  {
+    value: "write",
+    label: "Write",
+    description: "Co-write on a shared canvas; Calliope edits alongside you.",
+  },
+];
+
 const disabledReason = computed(() => {
   if (props.pending) return "Waiting for response";
   if (props.workspaces.length === 0) return "Workspace required";
@@ -248,36 +271,28 @@ defineExpose({ prefill });
           role="tablist"
           aria-label="Composer mode"
         >
-          <button
-            type="button"
-            class="composer__segment"
-            :class="{ 'is-active': mode === 'chat' }"
-            role="tab"
-            :aria-selected="mode === 'chat'"
-            @click="setMode('chat')"
+          <v-tooltip
+            v-for="option in modeOptions"
+            :key="option.value"
+            :text="option.description"
+            location="top"
+            :open-delay="120"
+            max-width="252"
           >
-            Chat
-          </button>
-          <button
-            type="button"
-            class="composer__segment"
-            :class="{ 'is-active': mode === 'search' }"
-            role="tab"
-            :aria-selected="mode === 'search'"
-            @click="setMode('search')"
-          >
-            Search
-          </button>
-          <button
-            type="button"
-            class="composer__segment"
-            :class="{ 'is-active': mode === 'write' }"
-            role="tab"
-            :aria-selected="mode === 'write'"
-            @click="setMode('write')"
-          >
-            Write
-          </button>
+            <template #activator="{ props: tipProps }">
+              <button
+                v-bind="tipProps"
+                type="button"
+                class="composer__segment"
+                :class="{ 'is-active': mode === option.value }"
+                role="tab"
+                :aria-selected="mode === option.value"
+                @click="setMode(option.value)"
+              >
+                {{ option.label }}
+              </button>
+            </template>
+          </v-tooltip>
         </div>
 
         <div class="composer__pills">
@@ -348,17 +363,22 @@ defineExpose({ prefill });
           :while-press="canSubmit ? { scale: 0.92 } : undefined"
           :transition="{ type: 'spring', stiffness: 420, damping: 20 }"
         >
-          <button
-            type="button"
-            class="composer__send"
-            :class="{ 'is-active': canSubmit, 'is-pending': pending }"
-            :disabled="!canSubmit"
-            aria-label="Submit"
-            @click="submit"
-          >
-            <v-icon v-if="!pending" icon="$mdi-arrow-up" size="20" />
-            <span v-else class="composer__send-spinner" aria-hidden="true" />
-          </button>
+          <v-tooltip text="Send message" location="top" :open-delay="200">
+            <template #activator="{ props: tipProps }">
+              <button
+                v-bind="tipProps"
+                type="button"
+                class="composer__send"
+                :class="{ 'is-active': canSubmit, 'is-pending': pending }"
+                :disabled="!canSubmit"
+                aria-label="Submit"
+                @click="submit"
+              >
+                <v-icon v-if="!pending" icon="$mdi-arrow-up" size="20" />
+                <span v-else class="composer__send-spinner" aria-hidden="true" />
+              </button>
+            </template>
+          </v-tooltip>
         </Motion>
       </div>
     </div>

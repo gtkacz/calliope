@@ -10,6 +10,7 @@ import TypingIndicator from './TypingIndicator.vue'
 defineProps<{
   messages: MessageRead[]
   pending: boolean
+  pendingSince: number | null
   errorMessage: string | null
 }>()
 
@@ -61,7 +62,7 @@ function sourcesFor(message: MessageRead): SourceReference[] {
       :animate="{ opacity: 1, y: 0 }"
       :transition="{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }"
     >
-      <TypingIndicator />
+      <TypingIndicator :since="pendingSince" />
     </Motion>
 
     <div v-if="errorMessage" class="timeline__error">

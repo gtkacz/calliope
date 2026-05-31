@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
 import { apiBaseUrl } from "@/shared/api/client";
 import type { SessionSummary } from "../types";
@@ -12,6 +12,7 @@ import SettingsDialog from "@/features/settings/components/SettingsDialog.vue";
 import ComposerBar from "./ComposerBar.vue";
 import ConversationDrawer from "./ConversationDrawer.vue";
 import ConversationTimeline from "./ConversationTimeline.vue";
+import SourceViewerDialog from "./SourceViewerDialog.vue";
 
 const chat = useChatStore();
 const profile = useProfileStore();
@@ -95,24 +96,37 @@ async function loadInitialData() {
   startupLoading.value = true;
   startupError.value = false;
   try {
-    await Promise.all([
-      workspace.refresh(),
-      profile.refresh(),
-      chat.refreshConversationList(),
-    ]);
+    await Promise.all([workspace.refresh(), profile.refresh()]);
+    // Pick the default workspace before listing conversations so the very first
+    // fetch is already scoped — no flash of another workspace's conversations.
+    if (chat.selectedWorkspaceId === null && workspace.workspaces.length > 0) {
+      chat.selectedWorkspaceId = workspace.workspaces[0].id;
+    }
+    if (chat.selectedChatProfileId === null && profile.chatProfiles.length > 0) {
+      chat.selectedChatProfileId = profile.chatProfiles[0].id;
+    }
+    await chat.refreshConversationList();
   } catch {
     startupError.value = true;
-    return;
   } finally {
     startupLoading.value = false;
   }
-  if (chat.selectedWorkspaceId === null && workspace.workspaces.length > 0) {
-    chat.selectedWorkspaceId = workspace.workspaces[0].id;
-  }
-  if (chat.selectedChatProfileId === null && profile.chatProfiles.length > 0) {
-    chat.selectedChatProfileId = profile.chatProfiles[0].id;
-  }
 }
+
+// Switching workspaces re-scopes the conversation list and abandons the open
+// conversation, since it belongs to the workspace we just left. The startup
+// null -> id assignment is handled by loadInitialData, so it's skipped here.
+watch(
+  () => chat.selectedWorkspaceId,
+  (next, previous) => {
+    if (previous === null || previous === next) return;
+    chat.activeSessionId = null;
+    chat.messages = [];
+    chat.citedDocumentIds = [];
+    chat.mentionDocuments = [];
+    void chat.refreshConversationList();
+  },
+);
 
 onMounted(loadInitialData);
 </script>
@@ -241,6 +255,7 @@ onMounted(loadInitialData);
 
     <SettingsDialog />
     <EditorPanel v-model:open="editorOpen" />
+    <SourceViewerDialog />
 
     <v-dialog
       :model-value="deleteTarget !== null"

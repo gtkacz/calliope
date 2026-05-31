@@ -35,7 +35,9 @@ function citationMarkup(segments: string[]): string {
     .map((path) => {
       const fullPath = md.utils.escapeHtml(path);
       const base = md.utils.escapeHtml(path.slice(path.lastIndexOf("/") + 1));
-      return `<span class="md-citation__item" title="${fullPath}">${base}</span>`;
+      // data-path lets the chat view resolve the chip back to a retrieved source
+      // and open the full document; title surfaces the full path on hover.
+      return `<span class="md-citation__item" data-path="${fullPath}" title="${fullPath}">${base}</span>`;
     })
     .join("");
   return `<span class="md-citation" role="note" aria-label="Cited sources">${items}</span>`;
@@ -87,6 +89,80 @@ function citationRule(state: StateCore): void {
 }
 
 md.core.ruler.push("calliope_citation", citationRule);
+
+// An attribution line such as "*Source: Setting Description.md (Section "…")*".
+// The model emits these as a standalone (usually italic) paragraph; we lift the
+// whole line into a styled, clickable footnote rather than leaving it as prose.
+const SOURCE_PREFIX = /^\s*(Sources?)\s*:\s*(.*)$/s;
+const TRAILING_PAREN = /\s*(\([^()]*\))\s*$/;
+
+function collectInnerText(tokens: Token[], from: number, to: number): string | null {
+  let text = "";
+  for (let index = from; index < to; index += 1) {
+    const token = tokens[index];
+    if (token.type !== "text" && token.type !== "softbreak") return null;
+    text += token.type === "softbreak" ? " " : token.content;
+  }
+  return text;
+}
+
+function sourceNoteMarkup(label: string, body: string): string {
+  const locationMatch = TRAILING_PAREN.exec(body);
+  const location = locationMatch !== null ? locationMatch[1] : "";
+  const reference = (location !== "" ? body.slice(0, locationMatch!.index) : body).trim();
+  const safeLabel = md.utils.escapeHtml(label);
+  const safeReference = md.utils.escapeHtml(reference);
+  const dataPath = md.utils.escapeHtml(reference);
+  const locationMarkup =
+    location !== ""
+      ? `<span class="md-source__loc">${md.utils.escapeHtml(location)}</span>`
+      : "";
+  return (
+    `<span class="md-source" role="note" data-path="${dataPath}">` +
+    `<span class="md-source__label">${safeLabel}</span>` +
+    `<span class="md-source__ref">${safeReference}</span>` +
+    `${locationMarkup}</span>`
+  );
+}
+
+// Replace a child-token run [from, to) (inclusive of an em wrapper, or just the
+// lone text token) with a single html_inline source-note token.
+function buildSourceNoteToken(state: StateCore, label: string, body: string): Token {
+  const token = new state.Token("html_inline", "", 0);
+  token.content = sourceNoteMarkup(label, body);
+  return token;
+}
+
+function sourceNoteRule(state: StateCore): void {
+  for (const block of state.tokens) {
+    if (block.type !== "inline" || block.children === null) continue;
+    const children = block.children;
+
+    // Case A: the whole line is wrapped in emphasis — em_open … text … em_close.
+    if (
+      children.length >= 3 &&
+      children[0].type === "em_open" &&
+      children[children.length - 1].type === "em_close"
+    ) {
+      const inner = collectInnerText(children, 1, children.length - 1);
+      const match = inner !== null ? SOURCE_PREFIX.exec(inner) : null;
+      if (match !== null) {
+        block.children = [buildSourceNoteToken(state, match[1], match[2])];
+        continue;
+      }
+    }
+
+    // Case B: a bare attribution paragraph with no emphasis.
+    if (children.length === 1 && children[0].type === "text") {
+      const match = SOURCE_PREFIX.exec(children[0].content);
+      if (match !== null) {
+        block.children = [buildSourceNoteToken(state, match[1], match[2])];
+      }
+    }
+  }
+}
+
+md.core.ruler.push("calliope_source_note", sourceNoteRule);
 
 // External links should open in a new tab; rel closes the reverse-tabnabbing vector.
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {

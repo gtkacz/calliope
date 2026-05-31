@@ -4,6 +4,7 @@ import { computed } from 'vue'
 import { renderMarkdown } from '@/shared/markdown'
 
 import type { SourceReference } from '../types'
+import { useSourceViewerStore } from '../stores/sourceViewerStore'
 import SourceChip from './SourceChip.vue'
 
 const props = defineProps<{
@@ -12,12 +13,42 @@ const props = defineProps<{
   sources?: SourceReference[]
 }>()
 
+const viewer = useSourceViewerStore()
+
 const renderedContent = computed<string>(() => renderMarkdown(props.content))
 
 function displayRole(role: string): string {
   if (role === 'assistant') return 'Calliope'
   if (role === 'search') return 'Search'
   return role.charAt(0).toUpperCase() + role.slice(1)
+}
+
+function basename(path: string): string {
+  return path.split('/').pop() ?? path
+}
+
+// Resolve a citation/source-note path back to one of this turn's retrieved
+// sources so the click can open the full document. Matches on full path first,
+// then filename, since the model often cites by basename alone.
+function matchSource(path: string): SourceReference | undefined {
+  const lower = path.toLowerCase()
+  const base = basename(path).toLowerCase()
+  return props.sources?.find(
+    (source) =>
+      source.path.toLowerCase() === lower ||
+      basename(source.path).toLowerCase() === base,
+  )
+}
+
+// Event delegation: inline citation chips and the source-note line live inside
+// v-html, so they carry a data-path rather than a Vue listener.
+function onContentClick(event: MouseEvent) {
+  const origin = event.target as HTMLElement | null
+  const node = origin?.closest('[data-path]') as HTMLElement | null
+  const path = node?.getAttribute('data-path')
+  if (!path) return
+  const source = matchSource(path)
+  if (source !== undefined) viewer.show(source)
 }
 </script>
 
@@ -28,7 +59,11 @@ function displayRole(role: string): string {
       <span v-if="role === 'search'" class="assistant-turn__tag calliope-mono">retrieval</span>
     </header>
     <!-- Assistant output is LLM-authored markdown; renderMarkdown sanitizes before v-html. -->
-    <div class="assistant-turn__content markdown-body" v-html="renderedContent" />
+    <div
+      class="assistant-turn__content markdown-body"
+      @click="onContentClick"
+      v-html="renderedContent"
+    />
     <div v-if="sources && sources.length > 0" class="assistant-turn__sources">
       <span class="calliope-eyebrow assistant-turn__sources-label">Sources</span>
       <div class="assistant-turn__source-list">
@@ -283,7 +318,7 @@ function displayRole(role: string): string {
   border: 1px solid var(--calliope-bronze-glow);
   border-radius: var(--calliope-radius-pill);
   vertical-align: -0.16em;
-  cursor: default;
+  cursor: pointer;
   transition:
     color var(--calliope-duration-fast) var(--calliope-ease-out),
     background-color var(--calliope-duration-fast) var(--calliope-ease-out),
@@ -304,6 +339,63 @@ function displayRole(role: string): string {
   color: var(--calliope-bronze-deep);
   background: var(--calliope-bronze-glow);
   border-color: var(--calliope-bronze);
+}
+
+/* Source attribution line — the model emits "*Source: file.md (Section …)*";
+   markdown.ts lifts it into a styled, clickable footnote rather than bare italic.
+   A gilt left-rule and a small-caps label set it apart as editorial apparatus. */
+.markdown-body :deep(.md-source) {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4em;
+  margin-top: 0.25em;
+  padding: 0.2em 0.7em 0.2em 0.65em;
+  border-left: 2px solid var(--calliope-bronze);
+  border-radius: 0 var(--calliope-radius-sm) var(--calliope-radius-sm) 0;
+  background: var(--calliope-bronze-veil);
+  font-style: normal;
+  cursor: pointer;
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.markdown-body :deep(.md-source::before) {
+  content: '';
+  align-self: center;
+  flex: none;
+  width: 0.95em;
+  height: 0.95em;
+  background-color: var(--calliope-bronze);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M18%202H6a2%202%200%200%200-2%202v16l4-2%204%202%204-2%204%202V4a2%202%200%200%200-2-2m-1%2010H7v-2h10m0-3H7V7h10z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M18%202H6a2%202%200%200%200-2%202v16l4-2%204%202%204-2%204%202V4a2%202%200%200%200-2-2m-1%2010H7v-2h10m0-3H7V7h10z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.markdown-body :deep(.md-source:hover) {
+  background: var(--calliope-bronze-glow);
+  box-shadow: inset 2px 0 0 var(--calliope-bronze-deep);
+}
+
+.markdown-body :deep(.md-source__label) {
+  font-family: var(--calliope-font-mono);
+  font-size: 0.62em;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--calliope-bronze);
+}
+
+.markdown-body :deep(.md-source__ref) {
+  font-family: var(--calliope-font-mono);
+  font-size: 0.82em;
+  letter-spacing: 0.01em;
+  color: var(--calliope-paper);
+}
+
+.markdown-body :deep(.md-source__loc) {
+  font-size: 0.82em;
+  color: var(--calliope-paper-muted);
+  font-style: italic;
 }
 
 .assistant-turn__sources {

@@ -62,5 +62,11 @@ class ChunkRepository:
         ).all()
         return "\n\n".join(chunk.text for chunk in chunks)
 
+    def text_for_chunk(self, chunk_id: str, document_id: str) -> str | None:
+        chunk = self.session.get(Chunk, chunk_id)
+        if chunk is None or chunk.document_id != document_id:
+            return None
+        return chunk.text
+
     def count(self) -> int:
         return self.session.scalar(select(func.count()).select_from(Chunk)) or 0

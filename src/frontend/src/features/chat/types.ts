@@ -23,6 +23,7 @@ export interface SessionSummary {
   id: string
   title: string | null
   folder_id: string | null
+  workspace_id: string | null
   created_at: string
   updated_at: string
 }

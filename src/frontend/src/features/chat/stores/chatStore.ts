@@ -56,7 +56,7 @@ export const useChatStore = defineStore("chat", {
     async refreshConversationList() {
       const [folders, sessions] = await Promise.all([
         chatApi.listFolders(),
-        chatApi.listSessions(),
+        chatApi.listSessions(this.selectedWorkspaceId),
       ]);
       this.folders = folders;
       this.sessions = sessions;

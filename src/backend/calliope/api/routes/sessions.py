@@ -20,8 +20,9 @@ router = APIRouter()
 def list_sessions(
     session: Annotated[Session, Depends(get_db_session)],
     folder_id: str | None = None,
+    workspace_id: str | None = None,
 ) -> list[SessionSummary]:
-    return ChatRepository(session).list_sessions(folder_id=folder_id)
+    return ChatRepository(session).list_sessions(folder_id=folder_id, workspace_id=workspace_id)
 
 
 @router.get("/v1/sessions/{session_id}", response_model=SessionDetail)

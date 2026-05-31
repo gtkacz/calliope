@@ -92,7 +92,10 @@ class ChatService:
         try:
             session_id = request.session_id
             if session_id is None:
-                chat_session = repository.create_session(title=request.message[:80])
+                chat_session = repository.create_session(
+                    title=request.message[:80],
+                    workspace_id=request.workspace_id,
+                )
                 session_id = chat_session.id
 
             user_message = repository.add_message(

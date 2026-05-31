@@ -49,10 +49,35 @@ const mentionQuery = computed(() => {
 
 const mentionOpen = computed(() => activeMentionStart.value !== -1);
 
-const policyItems = [
-  { value: "strict_canon", title: "Strict canon" },
-  { value: "canon_plus_inference", title: "Canon + inference" },
-  { value: "creative_but_consistent", title: "Creative, consistent" },
+// Icon-only canon-policy radio. Each segment's tooltip carries the full
+// explanation; the icon alone reads at a glance once learned.
+const policyOptions: {
+  value: CanonPolicy;
+  icon: string;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "strict_canon",
+    icon: "$mdi-shield-check-outline",
+    label: "Strict canon",
+    description:
+      "Strict canon — answer only from what your notes explicitly state. No inference, no embellishment.",
+  },
+  {
+    value: "canon_plus_inference",
+    icon: "$mdi-scale-balance",
+    label: "Canon + inference",
+    description:
+      "Canon + inference — stay grounded in your notes, but allow reasonable conclusions that follow from them.",
+  },
+  {
+    value: "creative_but_consistent",
+    icon: "$mdi-fountain-pen-tip",
+    label: "Creative, consistent",
+    description:
+      "Creative, consistent — invent freely while staying consistent with everything established in canon.",
+  },
 ];
 
 const disabledReason = computed(() => {
@@ -246,19 +271,35 @@ defineExpose({ prefill });
         </div>
 
         <div class="composer__pills">
-          <v-select
-            :model-value="policy"
-            :items="policyItems"
-            item-title="title"
-            item-value="value"
-            variant="plain"
-            density="compact"
-            hide-details
-            class="composer__pill"
-            menu-icon="$mdi-chevron-down"
+          <div
+            class="composer__policy"
+            role="radiogroup"
             aria-label="Canon policy"
-            @update:model-value="emit('update:policy', $event as CanonPolicy)"
-          />
+          >
+            <v-tooltip
+              v-for="option in policyOptions"
+              :key="option.value"
+              :text="option.description"
+              location="top"
+              :open-delay="120"
+              max-width="252"
+            >
+              <template #activator="{ props: tipProps }">
+                <button
+                  v-bind="tipProps"
+                  type="button"
+                  class="composer__policy-seg"
+                  :class="{ 'is-active': policy === option.value }"
+                  role="radio"
+                  :aria-checked="policy === option.value"
+                  :aria-label="option.label"
+                  @click="emit('update:policy', option.value)"
+                >
+                  <v-icon :icon="option.icon" size="17" />
+                </button>
+              </template>
+            </v-tooltip>
+          </div>
           <v-select
             :model-value="selectedWorkspaceId"
             :items="workspaces"
@@ -374,14 +415,14 @@ defineExpose({ prefill });
 
 .composer__segmented {
   display: inline-flex;
-  padding: 0.15rem;
-  background: var(--calliope-overlay-hover);
+  padding: 0.2rem;
+  background: var(--calliope-ink);
   border-radius: var(--calliope-radius-pill);
-  border: 1px solid var(--calliope-border);
+  border: 1px solid var(--calliope-border-strong);
 }
 
 .composer__segment {
-  padding: 0.32rem 0.85rem;
+  padding: 0.34rem 0.95rem;
   background: transparent;
   border: none;
   border-radius: var(--calliope-radius-pill);
@@ -390,19 +431,33 @@ defineExpose({ prefill });
   font-size: 0.78rem;
   font-weight: 460;
   letter-spacing: 0.005em;
-  color: var(--calliope-paper-muted);
+  color: var(--calliope-paper-dim);
   transition:
     background-color var(--calliope-duration-fast) var(--calliope-ease-out),
-    color var(--calliope-duration-fast) var(--calliope-ease-out);
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
 }
 
 .composer__segment:hover {
   color: var(--calliope-paper);
 }
 
+.composer__segment:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--calliope-bronze-veil);
+}
+
+/* Active tab reads unmistakably: gilt fill, dark ink text, and a soft bloom so
+   it's obvious whether Chat or Search is selected. */
 .composer__segment.is-active {
-  background: var(--calliope-ink-top);
-  color: var(--calliope-paper);
+  background: var(--calliope-bronze);
+  color: var(--calliope-ink);
+  font-weight: 560;
+  box-shadow: 0 0 10px 1px var(--calliope-bronze-glow);
+}
+
+.composer__segment.is-active:hover {
+  color: var(--calliope-ink);
 }
 
 .composer__pills {
@@ -411,6 +466,51 @@ defineExpose({ prefill });
   gap: 0.4rem;
   justify-content: flex-end;
   min-width: 0;
+}
+
+/* Canon-policy radio: a single pill segmented into three icons. The container
+   is the radiogroup; each icon is a radio whose selected state lifts to gilt. */
+.composer__policy {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem;
+  background: var(--calliope-ink);
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-pill);
+  flex: none;
+}
+
+.composer__policy-seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--calliope-radius-pill);
+  color: var(--calliope-paper-dim);
+  cursor: pointer;
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.composer__policy-seg:hover {
+  color: var(--calliope-paper);
+}
+
+.composer__policy-seg:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--calliope-bronze-veil);
+}
+
+.composer__policy-seg.is-active {
+  background: var(--calliope-bronze);
+  color: var(--calliope-ink);
+  box-shadow: 0 0 9px 1px var(--calliope-bronze-glow);
 }
 
 .composer__pill {
@@ -497,8 +597,15 @@ defineExpose({ prefill });
     0 0 20px 4px var(--calliope-bronze-glow);
 }
 
+/* Disabled clearly reads as inert: dimmed, recessed, no gilt — so an empty
+   composer (or a missing workspace/profile) visibly cannot be submitted. */
 .composer__send:disabled {
   cursor: not-allowed;
+  background: var(--calliope-ink-raised);
+  color: var(--calliope-paper-dim);
+  border-color: var(--calliope-border);
+  opacity: 0.5;
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

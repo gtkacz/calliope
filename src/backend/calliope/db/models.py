@@ -132,6 +132,12 @@ class ChatSession(Base):
     folder_id: Mapped[str | None] = mapped_column(
         ForeignKey("conversation_folders.id", ondelete="SET NULL"),
     )
+    # Nullable: the workspace a conversation belongs to is captured on the first
+    # turn. Sessions predating this column stay NULL and are filtered out of every
+    # workspace-scoped listing rather than being shown or reassigned.
+    workspace_id: Mapped[str | None] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

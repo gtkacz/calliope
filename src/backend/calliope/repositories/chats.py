@@ -23,8 +23,12 @@ class ChatRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    def create_session(self, title: str | None = None) -> ChatSession:
-        chat_session = ChatSession(title=title)
+    def create_session(
+        self,
+        title: str | None = None,
+        workspace_id: str | None = None,
+    ) -> ChatSession:
+        chat_session = ChatSession(title=title, workspace_id=workspace_id)
         self.session.add(chat_session)
         self.session.flush()
         return chat_session
@@ -81,10 +85,18 @@ class ChatRepository:
     def message_to_read(self, message: ChatMessage) -> MessageRead:
         return self._message_to_read(message)
 
-    def list_sessions(self, folder_id: str | None = None) -> list[SessionSummary]:
+    def list_sessions(
+        self,
+        folder_id: str | None = None,
+        workspace_id: str | None = None,
+    ) -> list[SessionSummary]:
         statement = select(ChatSession).order_by(ChatSession.updated_at.desc(), ChatSession.id)
         if folder_id is not None:
             statement = statement.where(ChatSession.folder_id == folder_id)
+        # Strict workspace scoping: NULL-workspace (legacy) sessions never match an
+        # equality filter, so they stay hidden until reused under a workspace.
+        if workspace_id is not None:
+            statement = statement.where(ChatSession.workspace_id == workspace_id)
         sessions = self.session.scalars(statement).all()
         return [self._session_to_summary(chat_session) for chat_session in sessions]
 
@@ -98,6 +110,7 @@ class ChatRepository:
             id=chat_session.id,
             title=chat_session.title,
             folder_id=chat_session.folder_id,
+            workspace_id=chat_session.workspace_id,
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
             messages=[self._message_to_read(message) for message in messages],
@@ -232,6 +245,7 @@ class ChatRepository:
             id=chat_session.id,
             title=chat_session.title,
             folder_id=chat_session.folder_id,
+            workspace_id=chat_session.workspace_id,
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
         )
@@ -242,6 +256,7 @@ class ChatRepository:
             id=chat_session.id,
             title=chat_session.title,
             folder_id=chat_session.folder_id,
+            workspace_id=chat_session.workspace_id,
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
         )

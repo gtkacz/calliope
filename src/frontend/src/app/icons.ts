@@ -1,4 +1,5 @@
 import {
+  mdiArrowExpand,
   mdiArrowRightThin,
   mdiArrowUp,
   mdiBookOpenPageVariantOutline,
@@ -16,6 +17,7 @@ import {
   mdiFolderOutline,
   mdiFolderPlusOutline,
   mdiFolderSearchOutline,
+  mdiFountainPenTip,
   mdiLanguageMarkdownOutline,
   mdiLightbulbOutline,
   mdiMagnify,
@@ -23,6 +25,8 @@ import {
   mdiPlus,
   mdiFeather,
   mdiRestore,
+  mdiScaleBalance,
+  mdiShieldCheckOutline,
   mdiTextSearchVariant,
 } from '@mdi/js'
 
@@ -33,6 +37,7 @@ import {
  * templates as `$mdi-<name>` (Vuetify alias syntax).
  */
 export const appIconAliases: Record<string, string> = {
+  'mdi-arrow-expand': mdiArrowExpand,
   'mdi-arrow-right-thin': mdiArrowRightThin,
   'mdi-arrow-up': mdiArrowUp,
   'mdi-book-open-page-variant-outline': mdiBookOpenPageVariantOutline,
@@ -50,6 +55,7 @@ export const appIconAliases: Record<string, string> = {
   'mdi-folder-outline': mdiFolderOutline,
   'mdi-folder-plus-outline': mdiFolderPlusOutline,
   'mdi-folder-search-outline': mdiFolderSearchOutline,
+  'mdi-fountain-pen-tip': mdiFountainPenTip,
   'mdi-language-markdown-outline': mdiLanguageMarkdownOutline,
   'mdi-lightbulb-outline': mdiLightbulbOutline,
   'mdi-magnify': mdiMagnify,
@@ -57,5 +63,7 @@ export const appIconAliases: Record<string, string> = {
   'mdi-plus': mdiPlus,
   'mdi-feather': mdiFeather,
   'mdi-restore': mdiRestore,
+  'mdi-scale-balance': mdiScaleBalance,
+  'mdi-shield-check-outline': mdiShieldCheckOutline,
   'mdi-text-search-variant': mdiTextSearchVariant,
 }

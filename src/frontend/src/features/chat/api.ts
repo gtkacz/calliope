@@ -9,8 +9,16 @@ import type {
   SessionSummary,
 } from "./types";
 
-export function listSessions(): Promise<SessionSummary[]> {
-  return requestJson("/v1/sessions");
+export function listSessions(
+  workspaceId: string | null = null,
+): Promise<SessionSummary[]> {
+  // Scope the listing to the selected workspace; with no workspace the backend
+  // returns the full list (used only before a workspace is chosen).
+  const query =
+    workspaceId === null
+      ? ""
+      : `?workspace_id=${encodeURIComponent(workspaceId)}`;
+  return requestJson(`/v1/sessions${query}`);
 }
 
 export function getSession(sessionId: string): Promise<SessionDetail> {

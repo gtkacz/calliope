@@ -322,6 +322,52 @@ function formatTimestamp(iso: string): string {
   gap: 0.35rem;
 }
 
+/* The default plain VTextField is invisible against the sidebar; give these a
+   defined surface with clear hover and focus affordances so they read as inputs. */
+.drawer-filters__input :deep(.v-field) {
+  background: var(--calliope-ink-raised);
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-md);
+  padding-inline: 0.7rem;
+  transition:
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.drawer-filters__input :deep(.v-field__outline) {
+  display: none;
+}
+
+.drawer-filters__input :deep(.v-field:hover) {
+  border-color: var(--calliope-border-strong);
+  background: var(--calliope-overlay-hover);
+}
+
+.drawer-filters__input :deep(.v-field--focused) {
+  border-color: var(--calliope-bronze);
+  background: var(--calliope-ink-raised);
+  box-shadow: 0 0 0 3px var(--calliope-bronze-veil);
+}
+
+.drawer-filters__input :deep(.v-field__input) {
+  font-size: 0.82rem;
+  color: var(--calliope-paper);
+  min-height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.drawer-filters__input :deep(.v-field__prepend-inner .v-icon) {
+  color: var(--calliope-paper-dim);
+  opacity: 0.85;
+}
+
+.drawer-filters__input :deep(.v-field--focused .v-field__prepend-inner .v-icon) {
+  color: var(--calliope-bronze);
+  opacity: 1;
+}
+
 .drawer-filters__input :deep(input::placeholder) {
   font-family: var(--calliope-font-mono);
   font-size: 0.78rem;
@@ -334,6 +380,24 @@ function formatTimestamp(iso: string): string {
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 0.35rem;
+}
+
+/* The create-folder button echoes the inputs it sits beside: a bordered, hoverable
+   affordance rather than a borderless glyph that looks like decoration. */
+.drawer-filters__folder :deep(.v-btn) {
+  border: 1px solid var(--calliope-border);
+  border-radius: var(--calliope-radius-md);
+  color: var(--calliope-paper-muted);
+  transition:
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.drawer-filters__folder :deep(.v-btn:hover) {
+  border-color: var(--calliope-bronze);
+  color: var(--calliope-bronze);
+  background: var(--calliope-bronze-veil);
 }
 
 .drawer-list {

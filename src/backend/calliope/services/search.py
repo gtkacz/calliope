@@ -39,7 +39,10 @@ class SearchService:
             try:
                 session_id = request.session_id
                 if session_id is None:
-                    chat_session = chat_repo.create_session(title=request.query[:80])
+                    chat_session = chat_repo.create_session(
+                        title=request.query[:80],
+                        workspace_id=request.workspace_id,
+                    )
                     session_id = chat_session.id
                 else:
                     chat_repo.get_session_row(session_id)

@@ -181,6 +181,18 @@ class DocumentRead(BaseModel):
     indexed_at: datetime | None
 
 
+class DocumentContent(BaseModel):
+    id: str
+    path: str
+    title: str
+    # The indexed body, reconstructed by joining the document's chunks in order.
+    content: str
+    # The full text of the cited chunk when a chunk_id is supplied, so the reader
+    # can highlight the exact passage a citation came from. None when unrequested
+    # or when the chunk does not belong to this document.
+    passage: str | None = None
+
+
 class ConversationFolderCreate(BaseModel):
     name: str
     parent_id: str | None = None
@@ -206,6 +218,7 @@ class SessionSummary(BaseModel):
     id: str
     title: str | None
     folder_id: str | None
+    workspace_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

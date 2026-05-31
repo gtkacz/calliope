@@ -20,26 +20,32 @@ function sourcesFor(message: MessageRead): SourceReference[] {
 </script>
 
 <template>
-  <div class="timeline" :class="{ 'is-empty': messages.length === 0 }">
+  <div
+    class="timeline calliope-manuscript-ruling calliope-reading-vignette"
+    :class="{ 'is-empty': messages.length === 0 }"
+  >
     <EmptyState v-if="messages.length === 0 && !pending && !errorMessage" />
 
-    <Motion
-      v-for="message in messages"
-      :key="message.id"
-      tag="article"
-      class="timeline__row"
-      :initial="{ opacity: 0, scale: 0.98, y: 4 }"
-      :animate="{ opacity: 1, scale: 1, y: 0 }"
-      :transition="{ type: 'spring', stiffness: 280, damping: 26, mass: 0.6 }"
-    >
-      <MessageBubble v-if="message.role === 'user'" :content="message.content" />
-      <AssistantTurn
-        v-else
-        :role="message.role"
-        :content="message.content"
-        :sources="sourcesFor(message)"
-      />
-    </Motion>
+    <template v-for="(message, index) in messages" :key="message.id">
+      <!-- Gilt hairline section-break rule between every consecutive pair of turns -->
+      <hr v-if="index > 0" class="timeline__turn-rule calliope-turn-rule" aria-hidden="true" />
+
+      <Motion
+        tag="article"
+        class="timeline__row"
+        :initial="{ opacity: 0, scale: 0.98, y: 4 }"
+        :animate="{ opacity: 1, scale: 1, y: 0 }"
+        :transition="{ type: 'spring', stiffness: 280, damping: 26, mass: 0.6 }"
+      >
+        <MessageBubble v-if="message.role === 'user'" :content="message.content" />
+        <AssistantTurn
+          v-else
+          :role="message.role"
+          :content="message.content"
+          :sources="sourcesFor(message)"
+        />
+      </Motion>
+    </template>
 
     <Motion
       v-if="pending"
@@ -60,10 +66,11 @@ function sourcesFor(message: MessageRead): SourceReference[] {
 
 <style scoped>
 .timeline {
+  position: relative;
   display: grid;
   align-content: start;
-  gap: 1.4rem;
-  padding: 2.5rem 2.5rem 1.5rem;
+  gap: var(--calliope-space-lg);
+  padding: var(--calliope-space-xl) var(--calliope-space-xl) var(--calliope-space-lg);
   overflow: auto;
   max-width: 80%;
   margin: 0 auto;
@@ -76,6 +83,23 @@ function sourcesFor(message: MessageRead): SourceReference[] {
 .timeline__row {
   display: grid;
   width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+/* Gilt hairline turn-rule between conversation turns */
+.timeline__turn-rule {
+  height: 1px;
+  border: none;
+  margin: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--calliope-rule, var(--calliope-bronze)) 35%,
+    var(--calliope-rule, var(--calliope-bronze)) 65%,
+    transparent 100%
+  );
+  opacity: 0.35;
 }
 
 .timeline__error {

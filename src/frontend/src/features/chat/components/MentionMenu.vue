@@ -85,13 +85,16 @@ defineExpose({ selectHighlighted, moveHighlight });
   right: 0;
   margin-bottom: 0.4rem;
   background: var(--calliope-ink-raised);
-  border: 1px solid var(--calliope-border-strong);
+  /* Gilt hairline border echoes the editorial footnote pill treatment */
+  border: 1px solid var(--calliope-bronze-veil);
   border-radius: var(--calliope-radius-xl);
-  box-shadow: var(--calliope-shadow-rest);
+  box-shadow:
+    var(--calliope-shadow-rest),
+    0 0 0 1px var(--calliope-border-strong);
   max-height: 14rem;
   overflow-y: auto;
   z-index: 100;
-  padding: 0.3rem;
+  padding: var(--calliope-space-2xs);
 }
 
 .mention-menu__item {
@@ -111,7 +114,11 @@ defineExpose({ selectHighlighted, moveHighlight });
 }
 
 .mention-menu__item.is-highlighted {
-  background: var(--calliope-overlay-hover);
+  background: var(--calliope-overlay-active);
+}
+
+.mention-menu__item.is-highlighted .mention-menu__title {
+  color: var(--calliope-paper);
 }
 
 .mention-menu__title {
@@ -126,7 +133,7 @@ defineExpose({ selectHighlighted, moveHighlight });
 
 .mention-menu__path {
   font-size: 0.68rem;
-  color: var(--calliope-paper-dim);
+  color: var(--calliope-paper-muted);
   white-space: nowrap;
   letter-spacing: 0.02em;
   flex-shrink: 0;

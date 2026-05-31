@@ -54,15 +54,15 @@ onMounted(() => store.refresh())
 .reindex-panel {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--calliope-space-md);
   max-width: 36rem;
 }
 
 .reindex-panel__head {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding-bottom: 0.55rem;
+  gap: var(--calliope-space-2xs);
+  padding-bottom: var(--calliope-space-xs);
   border-bottom: 1px solid var(--calliope-border);
 }
 
@@ -81,7 +81,7 @@ onMounted(() => store.refresh())
 }
 
 .reindex-panel__actions {
-  margin-top: 0.4rem;
+  margin-top: var(--calliope-space-2xs);
   display: flex;
 }
 </style>

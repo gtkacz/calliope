@@ -75,7 +75,7 @@ function formatTimestamp(iso: string): string {
 </script>
 
 <template>
-  <aside class="conversation-drawer">
+  <aside class="conversation-drawer calliope-sidebar-grain">
     <header class="drawer-brand">
       <span class="drawer-brand__wordmark calliope-serif">Calliope</span>
       <span class="drawer-brand__sub calliope-eyebrow">Studio</span>
@@ -239,13 +239,37 @@ function formatTimestamp(iso: string): string {
   min-height: 0;
   background: var(--calliope-ink);
   border-right: 1px solid var(--calliope-border-strong);
+  /* z-index keeps the grain ::after above scrollable content */
+  z-index: 0;
 }
 
 .drawer-brand {
   display: flex;
   align-items: baseline;
   gap: 0.55rem;
-  padding: 1.4rem 1.5rem 0.4rem;
+  padding: var(--calliope-space-lg) var(--calliope-space-md) var(--calliope-space-xs);
+  /* Gilt underline echoing the manuscript turn-rule motif */
+  border-bottom: 1px solid var(--calliope-border);
+  position: relative;
+}
+
+/* Gilt accent rule beneath the brand wordmark */
+.drawer-brand::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: var(--calliope-space-md);
+  right: var(--calliope-space-md);
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--calliope-rule) 30%,
+    var(--calliope-rule) 70%,
+    transparent 100%
+  );
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 .drawer-brand__wordmark {
@@ -263,7 +287,7 @@ function formatTimestamp(iso: string): string {
 }
 
 .drawer-workspace {
-  padding: 0.65rem 1.5rem 1rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-md) var(--calliope-space-sm);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
@@ -284,7 +308,7 @@ function formatTimestamp(iso: string): string {
 }
 
 .drawer-actions {
-  padding: 1rem 1.5rem 0.5rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-md) var(--calliope-space-xs);
 }
 
 .drawer-actions__new {
@@ -292,7 +316,7 @@ function formatTimestamp(iso: string): string {
 }
 
 .drawer-filters {
-  padding: 0 1.5rem 0.8rem;
+  padding: 0 var(--calliope-space-md) var(--calliope-space-sm);
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -314,7 +338,7 @@ function formatTimestamp(iso: string): string {
 
 .drawer-list {
   overflow-y: auto;
-  padding: 0.5rem 0.75rem 1.5rem;
+  padding: var(--calliope-space-xs) var(--calliope-space-xs) var(--calliope-space-xl);
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -445,6 +469,8 @@ function formatTimestamp(iso: string): string {
 .drawer-session.is-active {
   background: var(--calliope-overlay-active);
   color: var(--calliope-paper);
+  /* Warm inner glow on the active row evoking candlelight illumination */
+  box-shadow: inset 0 0 0 1px var(--calliope-bronze-veil);
 }
 
 .drawer-session__bar {
@@ -452,11 +478,15 @@ function formatTimestamp(iso: string): string {
   height: 18px;
   border-radius: 2px;
   background: transparent;
-  transition: background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
 }
 
 .drawer-session.is-active .drawer-session__bar {
   background: var(--calliope-bronze);
+  /* Gilt glow bloom on the active indicator bar */
+  box-shadow: 0 0 6px 1px var(--calliope-bronze-glow);
 }
 
 .drawer-session__title {

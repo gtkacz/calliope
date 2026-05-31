@@ -333,11 +333,11 @@ onUnmounted(() => {
 }
 
 .file-picker__head {
-  padding: 1.35rem 1.5rem 0.95rem;
+  padding: var(--calliope-space-lg) var(--calliope-space-lg) var(--calliope-space-sm);
   border-bottom: 1px solid var(--calliope-border);
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--calliope-space-2xs);
 }
 
 .file-picker__title {
@@ -355,7 +355,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  padding: 0.85rem 1.5rem 0.35rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-lg) var(--calliope-space-2xs);
   font-size: 0.78rem;
   color: var(--calliope-paper-muted);
   min-height: 2rem;
@@ -397,8 +397,8 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.2rem 1.5rem 0.85rem;
+  gap: var(--calliope-space-xs);
+  padding: var(--calliope-space-2xs) var(--calliope-space-lg) var(--calliope-space-sm);
 }
 
 .file-picker__manual-field {
@@ -605,9 +605,9 @@ onUnmounted(() => {
 .file-picker__foot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
+  gap: var(--calliope-space-md);
   align-items: center;
-  padding: 0.95rem 1.5rem 1.1rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-lg) var(--calliope-space-md);
   border-top: 1px solid var(--calliope-border);
   background: var(--calliope-ink-soft);
 }

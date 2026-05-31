@@ -169,6 +169,7 @@ function setMode(next: ComposerMode) {
           :key="doc.id"
           class="composer__citation calliope-mono"
         >
+          <v-icon size="11" icon="mdi-file-document-outline" class="composer__citation-icon" aria-hidden="true" />
           @{{ doc.title || doc.path }}
           <button
             type="button"
@@ -281,9 +282,9 @@ function setMode(next: ComposerMode) {
         <Motion
           tag="div"
           class="composer__send-wrap"
-          :while-hover="canSubmit ? { scale: 1.05 } : undefined"
-          :while-press="canSubmit ? { scale: 0.94 } : undefined"
-          :transition="{ type: 'spring', stiffness: 380, damping: 22 }"
+          :while-hover="canSubmit ? { scale: 1.06 } : undefined"
+          :while-press="canSubmit ? { scale: 0.92 } : undefined"
+          :transition="{ type: 'spring', stiffness: 420, damping: 20 }"
         >
           <button
             type="button"
@@ -311,7 +312,7 @@ function setMode(next: ComposerMode) {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  padding: 0.85rem 1.75rem 1.1rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-xl) var(--calliope-space-md);
   background: var(--calliope-ink-soft);
   border-top: 1px solid var(--calliope-border-strong);
 }
@@ -459,24 +460,46 @@ function setMode(next: ComposerMode) {
   border: 1px solid var(--calliope-border-strong);
   border-radius: 50%;
   cursor: pointer;
+  /* Spring transition is driven by motion-v; CSS transition handles colour states */
   transition:
     background-color var(--calliope-duration-fast) var(--calliope-ease-out),
     color var(--calliope-duration-fast) var(--calliope-ease-out),
-    border-color var(--calliope-duration-fast) var(--calliope-ease-out);
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-base) var(--calliope-ease-out);
 }
 
 .composer__send.is-active {
   background: var(--calliope-bronze);
   color: var(--calliope-ink);
   border-color: var(--calliope-bronze);
+  /* Warm gilt bloom — the "wax seal" glow evokes candlelight sealing a letter */
+  box-shadow:
+    0 0 0 3px var(--calliope-bronze-veil),
+    0 0 14px 2px var(--calliope-bronze-glow);
 }
 
 .composer__send.is-active:hover {
   background: var(--calliope-bronze-deep);
+  border-color: var(--calliope-bronze-deep);
+  box-shadow:
+    0 0 0 4px var(--calliope-bronze-veil),
+    0 0 20px 4px var(--calliope-bronze-glow);
 }
 
 .composer__send:disabled {
   cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer__send {
+    transition:
+      background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+      color var(--calliope-duration-fast) var(--calliope-ease-out),
+      border-color var(--calliope-duration-fast) var(--calliope-ease-out);
+  }
+  .composer__send-spinner {
+    animation: none;
+  }
 }
 
 .composer__send-spinner {
@@ -525,13 +548,28 @@ function setMode(next: ComposerMode) {
   gap: 0.3rem;
   padding: 0.18rem 0.55rem;
   background: var(--calliope-bronze-veil);
-  border: 1px solid var(--calliope-border-strong);
+  /* Editorial footnote pill: hairline gilt border evokes manuscript annotation marks */
+  border: 1px solid var(--calliope-bronze-veil);
   border-radius: var(--calliope-radius-pill);
   font-family: var(--calliope-font-mono);
   font-size: 0.7rem;
   color: var(--calliope-bronze);
   letter-spacing: 0.02em;
   white-space: nowrap;
+  transition:
+    border-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.composer__citation:hover {
+  border-color: var(--calliope-bronze);
+  background: var(--calliope-overlay-active);
+}
+
+.composer__citation-icon {
+  color: var(--calliope-bronze);
+  opacity: 0.75;
+  flex-shrink: 0;
 }
 
 .composer__citation-remove {

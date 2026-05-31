@@ -1,48 +1,61 @@
 /* Calliope — Dark Editorial Studio
  * Global base styles, custom CSS variables, refined chrome.
  * Components reference these tokens; never hardcode the palette.
+ *
+ * Decorative fonts (Google Fonts) are injected lazily by ensureFontsLoaded()
+ * in src/composables/useDecorativeFonts.ts — NOT imported here.
+ * Self-hosted fonts (Fraunces, Geist, Geist Mono) are imported in main.ts
+ * via @fontsource-variable packages.
  */
 
- @import url('https://fonts.googleapis.com/css2?family=David+Libre:wght@400;500;700&family=Libertinus+Mono&display=swap');
-
 :root {
-  /* Type families */
+  /* Type families
+   * --calliope-font-display and --calliope-font-chat are overridden at runtime
+   * by the appearance store when the user picks a decorative font. */
   --calliope-font-display: 'Fraunces Variable', 'Fraunces', Georgia, 'Times New Roman', serif;
   --calliope-font-body: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --calliope-font-mono: 'David Libre', 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
+  --calliope-font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, 'JetBrains Mono', 'Cascadia Code', monospace;
   --calliope-font-chat: var(--calliope-font-body);
 
-  /* Semantic palette (mirrors theme.ts; exposed for use beyond Vuetify tokens) */
-  --calliope-ink: #0E0C09;
-  --calliope-ink-soft: #18140E;
-  --calliope-ink-raised: #2A2317;
-  --calliope-ink-top: #342B1C;
-  --calliope-paper: #EFE7D6;
-  --calliope-paper-muted: rgba(239, 231, 214, 0.66);
-  --calliope-paper-dim: rgba(239, 231, 214, 0.50);
-  --calliope-paper-faint: rgba(239, 231, 214, 0.18);
-  --calliope-bronze: #C9A36A;
-  --calliope-bronze-deep: #B5905A;
-  --calliope-bronze-glow: rgba(201, 163, 106, 0.22);
-  --calliope-bronze-veil: rgba(201, 163, 106, 0.10);
-  --calliope-dim-teal: #5F8693;
-  --calliope-warm-error: #D97B6B;
-  --calliope-warm-error-soft: rgba(217, 123, 107, 0.36);
-  --calliope-warm-error-veil: rgba(217, 123, 107, 0.08);
+  /* Semantic palette — Gilded Scriptorium defaults (first-paint, no FOUC).
+   * The appearance store overwrites these on init() for persisted presets. */
+  --calliope-ink: #09080A;
+  --calliope-ink-soft: #141018;
+  --calliope-ink-raised: #1E1826;
+  --calliope-ink-top: #2A2235;
+  --calliope-paper: #F2E8D3;
+  --calliope-paper-muted: rgba(242, 232, 211, 0.70);
+  --calliope-paper-dim: rgba(242, 232, 211, 0.48);
+  --calliope-paper-faint: rgba(242, 232, 211, 0.11);
 
-  /* Borders / overlays — values widened so layers separate by luminance, not hue. */
-  --calliope-border: rgba(239, 231, 214, 0.14);
-  --calliope-border-strong: rgba(239, 231, 214, 0.22);
-  --calliope-overlay-hover: rgba(239, 231, 214, 0.06);
-  --calliope-overlay-active: rgba(201, 163, 106, 0.18);
+  /* Accent slot — gilt for Scriptorium; overridden per preset / custom accent */
+  --calliope-bronze: #D4A853;
+  --calliope-bronze-deep: #B8893A;
+  --calliope-bronze-glow: rgba(212, 168, 83, 0.22);
+  --calliope-bronze-veil: rgba(212, 168, 83, 0.10);
 
-  /* Elevation — soft directional shadow lets surfaces read as lifted even without color cues. */
+  /* Semantic colours */
+  --calliope-dim-teal: #5A8A7E;
+  --calliope-warm-error: #C96355;
+  --calliope-warm-error-soft: rgba(201, 99, 85, 0.36);
+  --calliope-warm-error-veil: rgba(201, 99, 85, 0.08);
+
+  /* Borders / overlays */
+  --calliope-border: rgba(242, 232, 211, 0.11);
+  --calliope-border-strong: rgba(242, 232, 211, 0.22);
+  --calliope-overlay-hover: rgba(242, 232, 211, 0.06);
+  --calliope-overlay-active: rgba(212, 168, 83, 0.18);
+
+  /* Gilt hairline gradient stop colour used by manuscript turn-rules */
+  --calliope-rule: #D4A853;
+
+  /* Elevation */
   --calliope-shadow-lift:
-    0 1px 0 rgba(239, 231, 214, 0.04) inset,
+    0 1px 0 rgba(242, 232, 211, 0.04) inset,
     0 8px 24px rgba(0, 0, 0, 0.45),
     0 2px 6px rgba(0, 0, 0, 0.35);
   --calliope-shadow-rest:
-    0 1px 0 rgba(239, 231, 214, 0.03) inset,
+    0 1px 0 rgba(242, 232, 211, 0.03) inset,
     0 2px 8px rgba(0, 0, 0, 0.32);
 
   /* Radii */
@@ -61,10 +74,35 @@
   --calliope-duration-base: 220ms;
   --calliope-duration-slow: 320ms;
 
+  /* Type scale — html font-size is set to this value so all rem-based sizes
+   * scale globally. 'cozy' (16px) is the default; the appearance store writes
+   * the correct value for the user's stored preference before first paint. */
+  --calliope-root-size: 16px;
+
+  /* Density multiplier — spacing-scale tokens multiply by this.
+   * Values: compact 0.85 / default 1 / airy 1.18 */
+  --calliope-density-mult: 1;
+
+  /* Spacing scale — components route main container paddings/gaps through these
+   * so that density changes have a visible, consistent effect.
+   * Base unit is 4px; each step is a named t-shirt size. */
+  --calliope-space-2xs: calc(4px  * var(--calliope-density-mult));
+  --calliope-space-xs:  calc(8px  * var(--calliope-density-mult));
+  --calliope-space-sm:  calc(12px * var(--calliope-density-mult));
+  --calliope-space-md:  calc(16px * var(--calliope-density-mult));
+  --calliope-space-lg:  calc(24px * var(--calliope-density-mult));
+  --calliope-space-xl:  calc(32px * var(--calliope-density-mult));
+  --calliope-space-2xl: calc(48px * var(--calliope-density-mult));
+
   /* Vuetify font override */
   --v-font-family: var(--calliope-font-body);
 
   color-scheme: dark;
+}
+
+/* Global type scale — all rem values scale with the user's chosen font size */
+html {
+  font-size: var(--calliope-root-size, 16px);
 }
 
 *,
@@ -83,7 +121,9 @@ body,
 
 body {
   font-family: var(--calliope-font-body);
-  font-size: 15px;
+  /* 0.9375rem = 15px at 16px root — keeps the body 1px smaller than the scale base
+   * so headings and display text have clear visual separation */
+  font-size: 0.9375rem;
   line-height: 1.55;
   color: var(--calliope-paper);
   background: var(--calliope-ink);
@@ -94,7 +134,7 @@ body {
 }
 
 ::selection {
-  background: rgba(201, 163, 106, 0.36);
+  background: var(--calliope-bronze-glow);
   color: var(--calliope-paper);
 }
 
@@ -136,7 +176,7 @@ body {
   border-radius: var(--calliope-radius-sm);
 }
 
-/* Editorial utility classes — used sparingly across components */
+/* ─── Editorial utility classes ─────────────────────────────────────────────── */
 
 .calliope-display {
   font-family: var(--calliope-font-display);
@@ -182,6 +222,123 @@ body {
   color: var(--calliope-paper-dim);
 }
 
+/* ─── Gilded Scriptorium signature treatments ───────────────────────────────
+ *
+ * Component agents apply these classes where appropriate.
+ * The classes are intentionally pointer-events:none where they are purely
+ * decorative overlays so they never interfere with interaction.
+ */
+
+/**
+ * Drop-cap — illuminated first letter of the first paragraph in an assistant turn.
+ * Apply on the first <p> inside .assistant-turn-body (or equivalent).
+ * ::first-letter lifts the initial into gilt Fraunces at ~3.2em, float-left,
+ * with a warm text-shadow glow evoking manuscript gilding.
+ */
+.calliope-drop-cap::first-letter {
+  font-family: var(--calliope-font-display);
+  font-size: 3.2em;
+  font-weight: 500;
+  font-variation-settings: 'opsz' 144, 'SOFT' 70;
+  color: var(--calliope-bronze);
+  float: left;
+  line-height: 0.78;
+  margin-right: 0.1em;
+  margin-top: 0.08em;
+  text-shadow:
+    0 0 18px var(--calliope-bronze-glow),
+    0 0 38px var(--calliope-bronze-veil);
+  /* Optical baseline correction — keeps the capital flush to the text top */
+  padding-top: 0.04em;
+}
+
+/**
+ * Manuscript ruling — faint horizontal hairlines every 28px behind the reading
+ * column, evoking vellum preparation. pointer-events:none so it never blocks clicks.
+ * Apply on the reading column wrapper element.
+ */
+.calliope-manuscript-ruling {
+  position: relative;
+}
+
+.calliope-manuscript-ruling::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    color-mix(in srgb, var(--calliope-paper) 1.8%, transparent) 27px,
+    color-mix(in srgb, var(--calliope-paper) 1.8%, transparent) 28px
+  );
+  z-index: 0;
+}
+
+/**
+ * Gilt turn-rule — a full-width horizontal gradient separating conversation turns,
+ * like a manuscript section break. Apply on the divider element between turns.
+ */
+.calliope-turn-rule {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--calliope-rule) 35%,
+    var(--calliope-rule) 65%,
+    transparent 100%
+  );
+  opacity: 0.35;
+  margin: 0;
+}
+
+/**
+ * Sidebar grain — inline SVG feTurbulence noise at ~2.8% opacity on the
+ * conversation drawer surface. Apply on the drawer/sidebar background element.
+ * No image assets required.
+ */
+.calliope-sidebar-grain {
+  position: relative;
+}
+
+.calliope-sidebar-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.028;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23grain)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  z-index: 1;
+}
+
+/**
+ * Ambient reading vignette — a radial gradient that dims the edges of the main
+ * reading column toward ink, centering focus like candlelight.
+ * Apply on the reading column wrapper alongside .calliope-manuscript-ruling.
+ */
+.calliope-reading-vignette {
+  position: relative;
+}
+
+.calliope-reading-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 80% 100% at 50% 40%,
+    transparent 45%,
+    color-mix(in srgb, var(--calliope-ink) 32%, transparent) 100%
+  );
+  z-index: 1;
+}
+
+/* ─── Vuetify integration overrides ────────────────────────────────────────── */
+
 /* Force Vuetify components to inherit the editorial body font */
 .v-application,
 .v-application__wrap {
@@ -200,13 +357,14 @@ body {
   opacity: 0.85;
 }
 
-/* Cleaner overlay scrim — warm ink, not pure black. Darker now so the lifted dialog reads as floating above page chrome rather than alongside it. */
+/* Warmer overlay scrim — ink, not pure black */
 .v-overlay__scrim {
   background: var(--calliope-ink) !important;
   opacity: 0.86 !important;
 }
 
-/* Settings panel shared layout — keep visual rhythm across Profiles / Workspaces / Indexing */
+/* ─── Settings panel shared layout ─────────────────────────────────────────── */
+
 .panel-grid {
   display: grid;
   grid-template-columns: minmax(240px, 300px) 1fr;

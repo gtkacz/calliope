@@ -108,7 +108,7 @@ onMounted(syncIndicator)
 <style scoped>
 .settings-shell {
   background: var(--calliope-ink-raised);
-  border: 1px solid rgba(239, 231, 214, 0.28);
+  border: 1px solid var(--calliope-border-strong);
   border-radius: var(--calliope-radius-lg);
   box-shadow: var(--calliope-shadow-lift);
   display: flex;
@@ -121,15 +121,15 @@ onMounted(syncIndicator)
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 1.5rem 2rem 1.1rem;
-  border-bottom: 1px solid rgba(239, 231, 214, 0.28);
+  gap: var(--calliope-space-md);
+  padding: var(--calliope-space-lg) var(--calliope-space-xl) var(--calliope-space-sm);
+  border-bottom: 1px solid var(--calliope-border-strong);
 }
 
 .settings-header__meta {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--calliope-space-2xs);
 }
 
 .settings-header__eyebrow {
@@ -168,8 +168,8 @@ onMounted(syncIndicator)
   position: relative;
   display: flex;
   gap: 0.4rem;
-  padding: 0 2rem;
-  border-bottom: 1px solid rgba(239, 231, 214, 0.28);
+  padding: 0 var(--calliope-space-xl);
+  border-bottom: 1px solid var(--calliope-border-strong);
 }
 
 .settings-tab {
@@ -211,8 +211,14 @@ onMounted(syncIndicator)
   will-change: transform, width;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .settings-tabs__indicator {
+    transition: none;
+  }
+}
+
 .settings-body {
-  padding: 1.5rem 2rem 2rem;
+  padding: var(--calliope-space-lg) var(--calliope-space-xl) var(--calliope-space-2xl);
   overflow-y: auto;
   background: var(--calliope-ink-raised);
 }
@@ -232,7 +238,7 @@ onMounted(syncIndicator)
 }
 
 .settings-body :deep(.v-field--variant-plain .v-field__outline::before) {
-  border-color: rgba(239, 231, 214, 0.32);
+  border-color: var(--calliope-border-strong);
   opacity: 1;
 }
 
@@ -261,7 +267,7 @@ onMounted(syncIndicator)
 .settings-body :deep(.v-chip.v-chip--variant-tonal) {
   background: var(--calliope-ink-top);
   color: var(--calliope-paper);
-  border: 1px solid rgba(239, 231, 214, 0.16);
+  border: 1px solid var(--calliope-border);
 }
 
 .settings-body :deep(.v-chip__close) {

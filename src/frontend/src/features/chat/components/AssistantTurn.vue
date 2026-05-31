@@ -48,13 +48,13 @@ function displayRole(role: string): string {
   max-width: 44rem;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: var(--calliope-space-sm);
 }
 
 .assistant-turn__head {
   display: flex;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: var(--calliope-space-xs);
 }
 
 .assistant-turn__role {
@@ -83,6 +83,30 @@ function displayRole(role: string): string {
 
 /* Rendered markdown — typeset to the editorial system rather than browser defaults.
    Selectors use :deep() because v-html content carries no scoped-style attribute. */
+
+/* Illuminated drop-cap on the first paragraph — implemented directly here
+   because the <p> lives inside v-html and cannot receive a class attribute. */
+.markdown-body :deep(> p:first-child::first-letter) {
+  font-family: var(--calliope-font-display);
+  font-size: 3.2em;
+  font-weight: 380;
+  line-height: 0.82;
+  float: left;
+  margin-right: 0.06em;
+  margin-top: 0.04em;
+  color: var(--calliope-bronze);
+  text-shadow:
+    0 0 18px var(--calliope-bronze-glow),
+    0 0 36px var(--calliope-bronze-veil);
+}
+
+/* Reduced-motion: flatten the glow bloom on the drop cap */
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body :deep(> p:first-child::first-letter) {
+    text-shadow: none;
+  }
+}
+
 .markdown-body :deep(> :first-child) {
   margin-top: 0;
 }
@@ -283,10 +307,10 @@ function displayRole(role: string): string {
 }
 
 .assistant-turn__sources {
-  margin-top: 0.65rem;
+  margin-top: var(--calliope-space-sm);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--calliope-space-xs);
 }
 
 .assistant-turn__sources-label {

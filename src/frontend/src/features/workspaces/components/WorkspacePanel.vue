@@ -171,8 +171,8 @@ async function save() {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.65rem;
+  gap: var(--calliope-space-xs);
+  padding: var(--calliope-space-xs) var(--calliope-space-sm);
   background: var(--calliope-ink);
   border: 1px solid var(--calliope-border);
   border-radius: var(--calliope-radius-sm);

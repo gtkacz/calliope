@@ -162,7 +162,7 @@ onMounted(loadInitialData);
         </div>
       </header>
 
-      <div class="chat-body">
+      <div class="chat-body calliope-manuscript-ruling calliope-reading-vignette">
         <div v-if="startupError" class="chat-fallback">
           <p class="calliope-eyebrow">Connection</p>
           <h1 class="calliope-display-lg chat-fallback__title">
@@ -293,10 +293,30 @@ onMounted(loadInitialData);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.875rem 1.75rem;
+  gap: var(--calliope-space-md);
+  padding: var(--calliope-space-sm) var(--calliope-space-xl);
   border-bottom: 1px solid var(--calliope-border-strong);
   background: var(--calliope-ink-soft);
+  position: relative;
+}
+
+/* Gilt hairline at the bottom of the top bar echoing manuscript section rules */
+.chat-context::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: var(--calliope-space-xl);
+  right: var(--calliope-space-xl);
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--calliope-rule) 30%,
+    var(--calliope-rule) 70%,
+    transparent 100%
+  );
+  opacity: 0.18;
+  pointer-events: none;
 }
 
 .chat-context__meta {
@@ -319,7 +339,7 @@ onMounted(loadInitialData);
 .chat-context__actions {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--calliope-space-sm);
 }
 
 .chat-context__profile {
@@ -329,23 +349,27 @@ onMounted(loadInitialData);
   font-size: 0.7rem;
   color: var(--calliope-paper-muted);
   padding: 0.25rem 0.7rem;
-  background: var(--calliope-overlay-hover);
-  border: 1px solid var(--calliope-border);
+  background: var(--calliope-bronze-veil);
+  border: 1px solid var(--calliope-bronze-veil);
   border-radius: var(--calliope-radius-pill);
   transition:
     border-color var(--calliope-duration-fast) var(--calliope-ease-out),
-    color var(--calliope-duration-fast) var(--calliope-ease-out);
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out);
 }
 
 .chat-context__profile:hover {
   color: var(--calliope-paper);
-  border-color: var(--calliope-border-strong);
+  border-color: var(--calliope-bronze);
+  background: var(--calliope-overlay-active);
 }
 
 .chat-context__profile-dot {
   color: var(--calliope-bronze);
   font-size: 0.5rem;
   line-height: 1;
+  /* Subtle gilt pulse on the active-profile indicator dot */
+  text-shadow: 0 0 6px var(--calliope-bronze-glow);
 }
 
 .chat-context__settings :deep(.v-btn__overlay) {
@@ -363,8 +387,11 @@ onMounted(loadInitialData);
 .chat-fallback {
   margin: auto;
   max-width: 36rem;
-  padding: 4rem 2.5rem;
+  padding: var(--calliope-space-2xl) var(--calliope-space-xl);
   text-align: left;
+  /* Sits above the manuscript ruling and vignette pseudo-elements */
+  position: relative;
+  z-index: 2;
 }
 
 .chat-fallback__title {
@@ -387,8 +414,8 @@ onMounted(loadInitialData);
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 0.7rem 1.75rem;
+  gap: var(--calliope-space-sm);
+  padding: var(--calliope-space-xs) var(--calliope-space-xl);
   font-size: 0.8125rem;
   color: var(--calliope-paper-muted);
   border-top: 1px solid var(--calliope-border-strong);

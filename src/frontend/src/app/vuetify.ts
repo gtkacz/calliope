@@ -2,15 +2,23 @@ import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 
-import { calliopeDark } from './theme'
+import {
+  calliopeScriptorium,
+  calliopeTwilight,
+  calliopeVellumNoir,
+  calliopeClassic,
+} from './theme'
 
-export default createVuetify({
+const vuetify = createVuetify({
   components,
   directives,
   theme: {
-    defaultTheme: 'calliopeDark',
+    defaultTheme: 'calliopeScriptorium',
     themes: {
-      calliopeDark,
+      calliopeScriptorium,
+      calliopeTwilight,
+      calliopeVellumNoir,
+      calliopeClassic,
     },
   },
   defaults: {
@@ -96,3 +104,10 @@ export default createVuetify({
     },
   },
 })
+
+/** Swap the Vuetify active theme by name. Called by the appearance store when the user changes palette. */
+export function setActiveVuetifyTheme(name: string): void {
+  vuetify.theme.change(name)
+}
+
+export default vuetify

@@ -1,9 +1,15 @@
+<script setup lang="ts">
+import { MotionConfig } from 'motion-v'
+</script>
+
 <template>
-  <v-app theme="calliopeDark">
-    <v-main class="calliope-app">
-      <router-view />
-    </v-main>
-  </v-app>
+  <MotionConfig :reducedMotion="'user'">
+    <v-app theme="calliopeScriptorium">
+      <v-main class="calliope-app">
+        <router-view />
+      </v-main>
+    </v-app>
+  </MotionConfig>
 </template>
 
 <style scoped>

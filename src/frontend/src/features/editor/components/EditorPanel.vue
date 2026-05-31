@@ -350,7 +350,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 1.25rem 1.5rem 1rem;
+  padding: var(--calliope-space-md) var(--calliope-space-lg) var(--calliope-space-sm);
   border-bottom: 1px solid var(--calliope-border);
   flex-shrink: 0;
 }
@@ -358,7 +358,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 .editor-panel__head-text {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--calliope-space-2xs);
 }
 
 .editor-panel__title {
@@ -394,7 +394,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 }
 
 .editor-panel__section {
-  padding: 0.85rem 1.5rem;
+  padding: var(--calliope-space-sm) var(--calliope-space-lg);
   border-bottom: 1px solid var(--calliope-border);
   flex-shrink: 0;
 }
@@ -413,7 +413,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 .editor-panel__file-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--calliope-space-sm);
 }
 
 .editor-panel__file-path {
@@ -516,7 +516,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 .editor-panel__diff {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--calliope-space-md);
 }
 
 .editor-panel__diff-pane {
@@ -528,7 +528,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 .editor-panel__foot {
   display: flex;
   justify-content: flex-end;
-  padding: 1rem 1.5rem;
+  padding: var(--calliope-space-md) var(--calliope-space-lg);
   border-top: 1px solid var(--calliope-border);
   background: var(--calliope-ink-soft);
   flex-shrink: 0;
@@ -536,7 +536,7 @@ const modeOptions: { value: EditMode; label: string }[] = [
 }
 
 .editor-panel__foot--proposal {
-  gap: 0.55rem;
+  gap: var(--calliope-space-xs);
 }
 
 .editor-panel__btn {

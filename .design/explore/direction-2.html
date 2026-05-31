@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Calliope — Arcane Twilight (Direction 2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════
+   ARCANE TWILIGHT — Design Token Layer
+   Midnight indigo/violet ink, moonlit gold accent,
+   luminous glows, starfield texture. Literary and arcane.
+═══════════════════════════════════════════════════════ */
+:root {
+  /* Type families */
+  --font-display:  'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:     'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:     'Geist Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  /* ── Ink (backgrounds) — deep midnight indigo/violet ── */
+  --ink:           #0A0912;   /* deepest void */
+  --ink-soft:      #100E1C;   /* surface 1 */
+  --ink-raised:    #18162A;   /* surface 2 */
+  --ink-top:       #201E36;   /* surface 3 — elevated cards */
+  --ink-float:     #282644;   /* surface 4 — tooltips/menus */
+
+  /* ── Paper (text) — warm parchment, not pure white ── */
+  --paper:         #EDE8F5;   /* primary text — slightly violet-tinted cream */
+  --paper-muted:   rgba(237, 232, 245, 0.66);
+  --paper-dim:     rgba(237, 232, 245, 0.44);
+  --paper-faint:   rgba(237, 232, 245, 0.16);
+
+  /* ── Accent — moonlit gold ── */
+  --gold:          #D4AF6A;   /* moonlit gold — primary accent */
+  --gold-deep:     #B8974E;   /* pressed / deeper state */
+  --gold-glow:     rgba(212, 175, 106, 0.22);
+  --gold-veil:     rgba(212, 175, 106, 0.10);
+  --gold-halo:     rgba(212, 175, 106, 0.06);
+
+  /* ── Secondary — aurora teal (very spare use) ── */
+  --aurora:        #7AB3C4;   /* teal glow for search/retrieval */
+  --aurora-dim:    rgba(122, 179, 196, 0.18);
+
+  /* ── Status ── */
+  --error:         #D97B6B;
+  --success:       #7A9B7E;
+  --warning:       #D9A86B;
+
+  /* ── Borders / overlays ── */
+  --border:        rgba(237, 232, 245, 0.11);
+  --border-strong: rgba(237, 232, 245, 0.20);
+  --border-gold:   rgba(212, 175, 106, 0.28);
+  --overlay-hover: rgba(237, 232, 245, 0.05);
+  --overlay-active:rgba(212, 175, 106, 0.14);
+
+  /* ── Violet nebula border (signature treatment) ── */
+  --border-violet: rgba(140, 110, 220, 0.22);
+
+  /* ── Elevation / Shadows ── */
+  --shadow-lift:
+    0 1px 0 rgba(180, 160, 255, 0.05) inset,
+    0 8px 32px rgba(0, 0, 0, 0.65),
+    0 2px 8px rgba(0, 0, 0, 0.50);
+  --shadow-rest:
+    0 1px 0 rgba(180, 160, 255, 0.04) inset,
+    0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-glow-gold:
+    0 0 0 1px var(--gold-veil),
+    0 0 16px var(--gold-glow),
+    0 0 40px rgba(212, 175, 106, 0.08);
+  --shadow-glow-violet:
+    0 0 0 1px var(--border-violet),
+    0 0 20px rgba(140, 110, 220, 0.12);
+
+  /* ── Radii ── */
+  --radius-xs:   3px;
+  --radius-sm:   6px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   20px;
+  --radius-pill: 9999px;
+
+  /* ── Motion ── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:    150ms;
+  --dur-base:    220ms;
+  --dur-slow:    340ms;
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--paper);
+  background: #080710;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Starfield texture via repeating radial — very subtle ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 12% 8%,  rgba(237,232,245,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 34% 22%, rgba(237,232,245,0.35) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 57% 5%,  rgba(212,175,106,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 72% 16%, rgba(237,232,245,0.28) 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 31%, rgba(237,232,245,0.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 6%  47%, rgba(237,232,245,0.30) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 23% 61%, rgba(140,110,220,0.38) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45% 73%, rgba(237,232,245,0.22) 0%, transparent 100%),
+    radial-gradient(1px 1px at 63% 85%, rgba(237,232,245,0.40) 0%, transparent 100%),
+    radial-gradient(1px 1px at 79% 55%, rgba(237,232,245,0.28) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92% 78%, rgba(212,175,106,0.30) 0%, transparent 100%),
+    radial-gradient(1px 1px at 18% 90%, rgba(237,232,245,0.35) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50% 40%, rgba(237,232,245,0.18) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 81% 11%, rgba(237,232,245,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 39% 95%, rgba(140,110,220,0.25) 0%, transparent 100%);
+  z-index: 0;
+  opacity: 1;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DEMO PAGE LAYOUT
+═══════════════════════════════════════════════════════ */
+.demo-page {
+  width: 1440px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+.frame {
+  width: 1440px;
+  position: relative;
+  overflow: hidden;
+}
+
+.frame-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.7;
+  padding: 18px 36px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--ink);
+}
+
+/* ═══════════════════════════════════════════════════════
+   FRAME SEPARATOR
+═══════════════════════════════════════════════════════ */
+.frame-sep {
+  height: 3px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--border-violet),
+    var(--gold-glow),
+    var(--border-violet),
+    transparent);
+  margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════════════════ */
+.app-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 900px;
+  background: var(--ink);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DRAWER
+═══════════════════════════════════════════════════════ */
+.drawer {
+  background: var(--ink-soft);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Subtle violet nebula glow at top of drawer */
+.drawer::before {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: -40px;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(ellipse, rgba(120, 90, 200, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.drawer-brand {
+  padding: 22px 20px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.brand-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.72;
+  margin-bottom: 4px;
+}
+
+.brand-wordmark {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  font-optical-sizing: auto;
+  color: var(--paper);
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.brand-rule {
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  opacity: 0.30;
+  margin-top: 12px;
+}
+
+.drawer-workspace {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.workspace-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  margin-bottom: 4px;
+}
+
+.workspace-name {
+  font-family: var(--font-display);
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--paper-muted);
+  font-style: italic;
+}
+
+.drawer-actions {
+  padding: 14px 16px 12px;
+  flex-shrink: 0;
+}
+
+.btn-new-convo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  background: var(--overlay-active);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-md);
+  color: var(--gold);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  letter-spacing: 0.01em;
+}
+
+.btn-new-convo:hover {
+  background: rgba(212, 175, 106, 0.20);
+  border-color: rgba(212, 175, 106, 0.45);
+  box-shadow: var(--shadow-glow-gold);
+}
+
+.btn-new-convo svg {
+  flex-shrink: 0;
+}
+
+.drawer-search {
+  padding: 0 16px 10px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 12px;
+  background: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--paper-muted);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  outline: none;
+}
+
+.drawer-section-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  padding: 6px 20px 4px;
+  flex-shrink: 0;
+}
+
+.convo-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-faint) transparent;
+}
+
+.convo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 9px 20px 9px 17px;
+  cursor: pointer;
+  position: relative;
+  border-left: 3px solid transparent;
+  transition: background var(--dur-fast) var(--ease-out);
+  border-radius: 0;
+}
+
+.convo-item:hover {
+  background: var(--overlay-hover);
+}
+
+.convo-item.active {
+  background: rgba(212, 175, 106, 0.08);
+  border-left-color: var(--gold);
+}
+
+/* Luminous glow on active item */
+.convo-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 60px;
+  background: linear-gradient(90deg, var(--gold-halo), transparent);
+  pointer-events: none;
+}
+
+.convo-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.convo-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--paper);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.convo-item.active .convo-title {
+  color: var(--paper);
+}
+
+.convo-time {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--paper-dim);
+  margin-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+.drawer-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.footer-model-tag {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--paper-dim);
+  letter-spacing: 0.04em;
+}
+
+.footer-model-label {
+  font-size: 9.5px;
+  color: var(--gold);
+  opacity: 0.65;
+  display: block;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 1px;
+}
+
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--paper-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.btn-icon:hover {
+  background: var(--overlay-hover);
+  color: var(--paper-muted);
+  border-color: var(--border-strong);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHAT MAIN
+═══════════════════════════════════════════════════════ */
+.chat-main {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  overflow: hidden;
+  background: var(--ink);
+  position: relative;
+}
+
+/* Vignette for atmospheric depth */
+.chat-main::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(10, 9, 18, 0.55) 0%,
+    transparent 65%
+  );
+  z-index: 0;
+}
+
+/* ── Top bar ── */
+.chat-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 24px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(10, 9, 18, 0.85);
+  backdrop-filter: blur(12px);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.chat-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--paper);
+  font-optical-sizing: auto;
+  font-style: italic;
+  margin-right: auto;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--paper-dim);
+  background: var(--ink-raised);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.chip.gold {
+  border-color: var(--border-gold);
+  color: var(--gold);
+  background: var(--gold-halo);
+}
+
+.chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex-shrink: 0;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+/* ── Conversation body ── */
+.chat-body {
+  overflow-y: auto;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--paper-faint) transparent;
+}
+
+.timeline {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ── User message ── */
+.msg-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.msg-role-label {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  padding-right: 2px;
+}
+
+.msg-bubble-user {
+  max-width: 520px;
+  background: var(--ink-top);
+  border: 1px solid var(--border-violet);
+  border-radius: var(--radius-lg) var(--radius-xs) var(--radius-lg) var(--radius-lg);
+  padding: 13px 18px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--paper);
+  box-shadow:
+    0 1px 0 rgba(180, 160, 255, 0.06) inset,
+    0 4px 16px rgba(0, 0, 0, 0.40);
+  position: relative;
+}
+
+/* Luminous inner glow — as if lit from within */
+.msg-bubble-user::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(140, 110, 220, 0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ── Assistant turn ── */
+.msg-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assistant-role-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.assistant-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold) 0%, #A07840 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.msg-assistant-body {
+  background: var(--ink-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs) var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  padding: 18px 22px;
+  font-size: 14.5px;
+  line-height: 1.72;
+  color: var(--paper-muted);
+  box-shadow: var(--shadow-rest);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle top-left luminous corner — signature glow treatment */
+.msg-assistant-body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 180px;
+  height: 100px;
+  background: radial-gradient(ellipse at 0% 0%, rgba(120, 90, 200, 0.08) 0%, transparent 75%);
+  pointer-events: none;
+}
+
+.prose-p {
+  margin-bottom: 12px;
+}
+
+.prose-p:last-of-type {
+  margin-bottom: 0;
+}
+
+.prose-em {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--paper);
+  font-optical-sizing: auto;
+}
+
+.prose-strong {
+  font-weight: 600;
+  color: var(--paper);
+  letter-spacing: -0.01em;
+}
+
+/* ── Citation chip ── */
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px 2px 6px;
+  background: var(--gold-veil);
+  border: 1px solid var(--border-gold);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--gold);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  vertical-align: baseline;
+  margin-left: 3px;
+  position: relative;
+  top: -1px;
+}
+
+.citation-chip:hover {
+  background: var(--gold-glow);
+  border-color: rgba(212, 175, 106, 0.50);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+
+.citation-icon {
+  width: 11px;
+  height: 11px;
+  opacity: 0.75;
+}
+
+/* ── Message actions ── */
+.msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.msg-assistant-body:hover .msg-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--paper-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+}
+
+.action-btn:hover {
+  background: var(--overlay-hover);
+  color: var(--paper-muted);
+  border-color: var(--border-strong);
+}
+
+/* ── Typing indicator ── */
+.typing-indicator {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.typing-bubble {
+  background: var(--ink-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs) var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+}
+
+.typing-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  margin-left: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0.5;
+  animation: dot-pulse 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.20s; }
+.dot:nth-child(3) { animation-delay: 0.40s; }
+
+@keyframes dot-pulse {
+  0%, 80%, 100% { opacity: 0.28; transform: scale(0.85); }
+  40%           { opacity: 0.85; transform: scale(1.15);
+                  box-shadow: 0 0 6px var(--gold-glow); }
+}
+
+/* ── Composer bar ── */
+.composer-bar {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(10, 9, 18, 0.90);
+  backdrop-filter: blur(16px);
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.composer-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.composer-card {
+  background: var(--ink-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    var(--shadow-rest),
+    0 0 0 3px var(--gold-halo),
+    0 0 0 1px var(--border-gold);
+  overflow: hidden;
+  transition: box-shadow var(--dur-base) var(--ease-out);
+}
+
+/* Focus glow — luminous from within */
+.composer-card:focus-within {
+  border-color: var(--gold);
+  box-shadow:
+    var(--shadow-lift),
+    0 0 0 3px var(--gold-veil),
+    0 0 20px var(--gold-glow),
+    0 0 0 1px var(--border-gold);
+}
+
+.composer-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 16px 0;
+}
+
+.composer-textarea {
+  flex: 1;
+  min-height: 48px;
+  max-height: 160px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--paper);
+  font-family: var(--font-body);
+  font-size: 14.5px;
+  line-height: 1.6;
+  placeholder-color: var(--paper-dim);
+}
+
+.composer-textarea::placeholder {
+  color: var(--paper-dim);
+  font-style: italic;
+}
+
+.composer-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.composer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--paper-dim);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out);
+  letter-spacing: 0.03em;
+}
+
+.composer-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--paper-muted);
+}
+
+.composer-spacer { flex: 1; }
+
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gold);
+  border: none;
+  color: #1A1208;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-spring);
+  box-shadow: 0 0 16px var(--gold-glow), 0 2px 8px rgba(0,0,0,0.4);
+  flex-shrink: 0;
+}
+
+.send-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 24px var(--gold-glow), 0 4px 12px rgba(0,0,0,0.4);
+  background: #DDB96E;
+}
+
+.send-btn svg {
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FRAME 2 — EMPTY STATE
+═══════════════════════════════════════════════════════ */
+.empty-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 720px;
+  background: var(--ink);
+}
+
+.empty-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 40px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ambient radial glow for the empty state */
+.empty-main::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -60%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse,
+    rgba(120, 90, 200, 0.10) 0%,
+    rgba(212, 175, 106, 0.06) 35%,
+    transparent 70%);
+  pointer-events: none;
+}
+
+.empty-content {
+  max-width: 560px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.empty-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.68;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.empty-eyebrow::before,
+.empty-eyebrow::after {
+  content: '';
+  display: block;
+  height: 1px;
+  width: 32px;
+  background: linear-gradient(90deg, transparent, var(--gold));
+  opacity: 0.45;
+}
+
+.empty-eyebrow::after {
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+
+.empty-headline {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 300;
+  line-height: 1.12;
+  color: var(--paper);
+  letter-spacing: -0.025em;
+  font-optical-sizing: auto;
+  margin-bottom: 16px;
+}
+
+.empty-headline em {
+  font-style: italic;
+  color: var(--gold);
+}
+
+.empty-subtitle {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--paper-dim);
+  margin-bottom: 44px;
+  font-style: italic;
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-optical-sizing: auto;
+}
+
+/* ── Seed cards ── */
+.seed-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.seed-card {
+  background: var(--ink-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 18px;
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--dur-base) var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.seed-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(140, 110, 220, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+
+.seed-card:hover {
+  border-color: var(--border-gold);
+  background: var(--ink-top);
+  box-shadow: var(--shadow-glow-gold);
+  transform: translateY(-2px);
+}
+
+.seed-card:hover::before {
+  opacity: 1;
+}
+
+.seed-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: var(--gold-veil);
+  border: 1px solid var(--border-gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 13px;
+  color: var(--gold);
+}
+
+.seed-title {
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-weight: 400;
+  color: var(--paper);
+  font-optical-sizing: auto;
+  margin-bottom: 5px;
+  letter-spacing: -0.01em;
+}
+
+.seed-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--paper-dim);
+}
+
+/* ═══════════════════════════════════════════════════════
+   ORNAMENTAL ELEMENTS
+═══════════════════════════════════════════════════════ */
+.ornament {
+  display: block;
+  text-align: center;
+  font-size: 18px;
+  color: var(--gold);
+  opacity: 0.30;
+  margin-bottom: 22px;
+  letter-spacing: 0.5em;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SCROLLBAR STYLING
+═══════════════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--paper-faint);
+  border-radius: var(--radius-pill);
+}
+
+/* ═══════════════════════════════════════════════════════
+   SELECTION
+═══════════════════════════════════════════════════════ */
+::selection {
+  background: rgba(212, 175, 106, 0.32);
+  color: var(--paper);
+}
+</style>
+</head>
+<body>
+
+<div class="demo-page">
+
+  <!-- ══════════════════════════════════════════════════
+       FRAME 1 — Populated Conversation
+  ══════════════════════════════════════════════════ -->
+  <div class="frame">
+    <div class="frame-label">Direction 02 · Arcane Twilight &nbsp;/&nbsp; Frame 01 — Populated Conversation</div>
+
+    <div class="app-shell">
+
+      <!-- ── Drawer ── -->
+      <aside class="drawer">
+        <div class="drawer-brand">
+          <div class="brand-eyebrow">Studio</div>
+          <div class="brand-wordmark">Calliope</div>
+          <div class="brand-rule"></div>
+        </div>
+
+        <div class="drawer-workspace">
+          <div class="workspace-eyebrow">Workspace</div>
+          <div class="workspace-name">Saga of Ash — A21</div>
+        </div>
+
+        <div class="drawer-actions">
+          <button class="btn-new-convo">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            New conversation
+          </button>
+        </div>
+
+        <div class="drawer-search">
+          <input class="search-input" type="text" placeholder="Search…" style="pointer-events:none;">
+        </div>
+
+        <div class="drawer-section-label">Recent</div>
+
+        <div class="convo-list">
+          <div class="convo-item active">
+            <div class="convo-text">
+              <div class="convo-title">The Obsidian Court</div>
+              <div class="convo-time">just now</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Vael's betrayal — draft 2</div>
+              <div class="convo-time">2 h ago</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Chapter 3: the siege of Kestrel</div>
+              <div class="convo-time">yesterday</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Religion of the Tide-Mother</div>
+              <div class="convo-time">3 days ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <div class="footer-model-tag">
+            <span class="footer-model-label">Model</span>
+            llama3.1:70b
+          </div>
+          <button class="btn-icon" title="Settings" aria-label="Settings">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.44 3.44l.85.85M11.71 11.71l.85.85M11.71 3.44l-.85.85M4.29 11.71l-.85.85" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- ── Chat main ── -->
+      <main class="chat-main">
+
+        <!-- Top bar -->
+        <header class="chat-topbar">
+          <div class="chat-title">The Obsidian Court</div>
+          <div class="chip gold">
+            <span class="chip-dot"></span>
+            A21 · Saga of Ash
+          </div>
+          <div class="chip">
+            Chat · llama3.1
+          </div>
+          <div class="topbar-actions">
+            <button class="btn-icon" aria-label="Editor">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M10.5 2.5l3 3-8.5 8.5H2v-3L10.5 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button class="btn-icon" aria-label="Settings">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+                <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- Timeline -->
+        <div class="chat-body">
+          <div class="timeline">
+
+            <!-- User turn -->
+            <div class="msg-user">
+              <div class="msg-role-label">You</div>
+              <div class="msg-bubble-user">
+                Describe the throne room where Queen Maelith holds court — make it feel cold and absolute.
+              </div>
+            </div>
+
+            <!-- Assistant turn -->
+            <div class="msg-assistant">
+              <div class="assistant-role-label">
+                <div class="assistant-avatar">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M5 1.5c-1.1 0-2 .9-2 2 0 .85.53 1.58 1.3 1.86L4 8.5h2l-.3-3.14C6.47 5.08 7 4.35 7 3.5c0-1.1-.9-2-2-2z" fill="#1A1208"/>
+                  </svg>
+                </div>
+                <span class="msg-role-label" style="text-transform:uppercase; letter-spacing:.13em;">Calliope</span>
+              </div>
+              <div class="msg-assistant-body">
+                <p class="prose-p">The throne room of the Obsidian Court is built to <prose-strong class="prose-strong">unmake</prose-strong> the self. Its walls rise forty feet of polished basalt, so perfectly mirrored that attendants see their own pale faces retreating into infinity on either side — a reminder that the queen is singular, and all else merely reflection. No torches burn here; light seeps instead from thin veins of <span class="prose-em">glacial luminite</span> threaded through the stone, casting the chamber in a blue-white radiance as cold and sourceless as starlight.<span class="citation-chip">
+                  <svg class="citation-icon" viewBox="0 0 12 12" fill="none">
+                    <rect x="1.5" y="1" width="7" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M3.5 4h4M3.5 6h4M3.5 8h2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+                  </svg>
+                  lore/maelith.md
+                </span></p>
+                <p class="prose-p">At its far end, the throne itself: a single block of uncarved obsidian, seat and back cut by no chisel — pulled whole from the volcanic heart of the Ashcaldera and dragged here across three hundred miles of salted plain. Queen Maelith never descends to meet her petitioners. She sits motionless in that jagged dark, and the room does the speaking for her. To stand before the Obsidian Court is to understand, without being told, that <span class="prose-em">the cold is her mercy</span>, and silence her most generous reply.</p>
+
+                <div class="msg-actions">
+                  <button class="action-btn">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                      <rect x="4.5" y="4.5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.2"/>
+                      <path d="M1.5 7.5V2.5a1 1 0 011-1h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    Copy
+                  </button>
+                  <button class="action-btn">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                      <path d="M10 6A4 4 0 112 6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                      <path d="M10 3.5V6H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Typing indicator -->
+            <div class="typing-indicator">
+              <div class="assistant-role-label">
+                <div class="assistant-avatar">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <path d="M5 1.5c-1.1 0-2 .9-2 2 0 .85.53 1.58 1.3 1.86L4 8.5h2l-.3-3.14C6.47 5.08 7 4.35 7 3.5c0-1.1-.9-2-2-2z" fill="#1A1208"/>
+                  </svg>
+                </div>
+                <span class="msg-role-label" style="text-transform:uppercase; letter-spacing:.13em;">Calliope</span>
+              </div>
+              <div class="typing-bubble">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <span class="typing-label">composing</span>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /chat-body -->
+
+        <!-- Composer -->
+        <div class="composer-bar">
+          <div class="composer-inner">
+            <div class="composer-card">
+              <div class="composer-top">
+                <textarea
+                  class="composer-textarea"
+                  placeholder="Continue the story…"
+                  rows="2"
+                  style="pointer-events:none;"
+                ></textarea>
+              </div>
+              <div class="composer-bottom">
+                <div class="composer-chip">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                    <circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2"/>
+                    <circle cx="5" cy="5" r="1.5" fill="currentColor"/>
+                  </svg>
+                  Chat · llama3.1
+                </div>
+                <div class="composer-chip">@ Mention</div>
+                <div class="composer-spacer"></div>
+                <button class="send-btn" aria-label="Send">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 12V4M4.5 7.5L8 4l3.5 3.5" stroke="#1A1208" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </main><!-- /chat-main -->
+    </div><!-- /app-shell -->
+  </div><!-- /frame 1 -->
+
+  <div class="frame-sep"></div>
+
+  <!-- ══════════════════════════════════════════════════
+       FRAME 2 — Empty State / New Conversation
+  ══════════════════════════════════════════════════ -->
+  <div class="frame">
+    <div class="frame-label">Direction 02 · Arcane Twilight &nbsp;/&nbsp; Frame 02 — New Conversation · Empty State</div>
+
+    <div class="empty-shell">
+
+      <!-- Drawer (quiet state) -->
+      <aside class="drawer">
+        <div class="drawer-brand">
+          <div class="brand-eyebrow">Studio</div>
+          <div class="brand-wordmark">Calliope</div>
+          <div class="brand-rule"></div>
+        </div>
+
+        <div class="drawer-workspace">
+          <div class="workspace-eyebrow">Workspace</div>
+          <div class="workspace-name">Saga of Ash — A21</div>
+        </div>
+
+        <div class="drawer-actions">
+          <button class="btn-new-convo">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            New conversation
+          </button>
+        </div>
+
+        <div class="drawer-search">
+          <input class="search-input" type="text" placeholder="Search…" style="pointer-events:none;">
+        </div>
+
+        <div class="drawer-section-label">Recent</div>
+
+        <div class="convo-list">
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">The Obsidian Court</div>
+              <div class="convo-time">just now</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Vael's betrayal — draft 2</div>
+              <div class="convo-time">2 h ago</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Chapter 3: the siege of Kestrel</div>
+              <div class="convo-time">yesterday</div>
+            </div>
+          </div>
+          <div class="convo-item">
+            <div class="convo-text">
+              <div class="convo-title">Religion of the Tide-Mother</div>
+              <div class="convo-time">3 days ago</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-footer">
+          <div class="footer-model-tag">
+            <span class="footer-model-label">Model</span>
+            llama3.1:70b
+          </div>
+          <button class="btn-icon" aria-label="Settings">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Empty state hero -->
+      <main class="empty-main">
+        <div class="empty-content">
+          <div class="ornament">✦ · ✦</div>
+
+          <div class="empty-eyebrow">
+            Calliope · Studio
+          </div>
+
+          <h1 class="empty-headline">
+            Begin a <em>new</em> tale
+          </h1>
+          <p class="empty-subtitle">
+            Every world starts with a single sentence. What will yours be?
+          </p>
+
+          <div class="seed-cards">
+
+            <div class="seed-card">
+              <div class="seed-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 2L10 6H14L11 9l1 4-4-2.5L4 13l1-4L2 6h4L8 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="seed-title">Worldbuild a setting</div>
+              <div class="seed-desc">Establish geography, history, and the forces that shape your world.</div>
+            </div>
+
+            <div class="seed-card">
+              <div class="seed-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/>
+                  <path d="M3 13c0-2.76 2.24-5 5-5s5 2.24 5 5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="seed-title">Develop a character</div>
+              <div class="seed-desc">Give voice to a person — their history, contradictions, and desire.</div>
+            </div>
+
+            <div class="seed-card">
+              <div class="seed-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M2.5 3.5h11M2.5 6.5h8M2.5 9.5h10M2.5 12.5h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="seed-title">Continue a scene</div>
+              <div class="seed-desc">Pick up where the page left off — momentum, tension, and voice intact.</div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+
+    </div><!-- /empty-shell -->
+  </div><!-- /frame 2 -->
+
+</div><!-- /demo-page -->
+
+</body>
+</html>

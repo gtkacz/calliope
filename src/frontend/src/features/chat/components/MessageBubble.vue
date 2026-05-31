@@ -15,14 +15,14 @@ defineProps<{
 .message-bubble {
   justify-self: end;
   max-width: 38rem;
-  padding: 1rem 1.15rem 1.05rem;
+  padding: var(--calliope-space-md) var(--calliope-space-md) var(--calliope-space-sm);
   background: var(--calliope-ink-raised);
   border: 1px solid var(--calliope-border);
   border-radius: var(--calliope-radius-lg);
   border-bottom-right-radius: var(--calliope-radius-xs);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--calliope-space-2xs);
 }
 
 .message-bubble__role {

@@ -438,8 +438,8 @@ function close() {
   /* Translucent gilt ink, derived from the bronze token so it stays on-palette —
      the dark page reads through it like a real highlighter rather than a solid
      fill. Two-tone: lighter at the top, a touch denser at the base. */
-  --source-hit-soft: color-mix(in srgb, var(--calliope-bronze) 16%, transparent);
-  --source-hit-strong: color-mix(in srgb, var(--calliope-bronze) 30%, transparent);
+  --source-hit-soft: color-mix(in srgb, yellow 30%, transparent);
+  --source-hit-strong: color-mix(in srgb, yellow 30%, transparent);
   color: var(--calliope-paper);
   /* <mark> ships a solid-yellow UA background; clear it so only the gilt gradient
      shows and the un-swept state is genuinely transparent (not opaque yellow). */

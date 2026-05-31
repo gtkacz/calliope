@@ -38,6 +38,10 @@ class SamplingParams:
     top_p: float | None
     repetition_penalty: float | None
     frequency_penalty: float | None
+    # Completion ceiling, sent verbatim as the request's max_tokens. None omits the
+    # field (server default applies). Unlike the sampling knobs above it is not
+    # backend-discriminated, so it is set directly rather than merged from overrides.
+    max_tokens: int | None = None
 
 
 def resolve_sampling_params(
@@ -45,6 +49,7 @@ def resolve_sampling_params(
     *,
     prefer_min_p: bool,
     sampling_override: dict[str, Any] | None,
+    max_tokens: int | None = None,
 ) -> SamplingParams:
     """Merge policy defaults with per-profile overrides.
 
@@ -99,4 +104,5 @@ def resolve_sampling_params(
         top_p=base["top_p"],
         repetition_penalty=base["repetition_penalty"],
         frequency_penalty=base["frequency_penalty"],
+        max_tokens=max_tokens,
     )

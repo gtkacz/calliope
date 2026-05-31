@@ -1,10 +1,18 @@
 import asyncio
+import logging
 from typing import Any
 
 import httpx
 from calliope.config import DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
 from calliope.domain.errors import AppError
 from calliope.llm.sampling import SamplingParams
+
+logger = logging.getLogger(__name__)
+
+# OpenAI-compatible finish_reason emitted when generation stopped at the token
+# ceiling rather than a natural end. Surfaced as a warning because the truncated
+# content is otherwise indistinguishable from a complete response.
+_FINISH_REASON_LENGTH = "length"
 
 
 def verify_embedding_dimension(
@@ -88,6 +96,8 @@ class OpenAICompatibleClient:
                 payload["top_p"] = p.top_p
             if p.frequency_penalty is not None:
                 payload["frequency_penalty"] = p.frequency_penalty
+            if p.max_tokens is not None:
+                payload["max_tokens"] = p.max_tokens
         response = await self._post(
             f"{self.base_url}/chat/completions",
             code="generation_failed",
@@ -97,7 +107,16 @@ class OpenAICompatibleClient:
         self._raise_for_status(response, code="generation_failed")
 
         data = response.json()
-        return data["choices"][0]["message"]["content"]
+        choice = data["choices"][0]
+        if choice.get("finish_reason") == _FINISH_REASON_LENGTH:
+            logger.warning(
+                "generation hit the token ceiling (finish_reason=length, max_tokens=%s, "
+                "model=%s); the response is truncated. Raise CALLIOPE_DEFAULT_MAX_TOKENS "
+                "if documents are being cut off.",
+                payload.get("max_tokens"),
+                self.model,
+            )
+        return choice["message"]["content"]
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}

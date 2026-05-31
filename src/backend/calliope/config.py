@@ -9,6 +9,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 EMBEDDING_DIMENSIONS = 1024
 DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
 
+# Explicit completion ceiling sent on every generation request. OpenAI-compatible
+# servers that receive no max_tokens fall back to their own default cap, which on
+# common local backends is small (text-generation-webui ~200, KoboldCpp 512), so
+# write-mode document rewrites silently truncate. 4096 holds a full character
+# sheet or lore entry (rarely > 3000 tokens) while staying within the context
+# window of every local model Calliope targets; operators raise it per deployment.
+DEFAULT_MAX_TOKENS = 4096
+
 # RRF scores top out ~0.033 for rank-1; 0.005 eliminates only true noise
 # (rank >> 100 from both sources) while keeping at least one result unless
 # the entire candidate set is empty.
@@ -33,6 +41,7 @@ class Settings(BaseSettings):
         default=DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
         gt=0,
     )
+    default_max_tokens: int = Field(default=DEFAULT_MAX_TOKENS, gt=0)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )

@@ -11,6 +11,7 @@ from calliope.config import EMBEDDING_DIMENSIONS, Settings
 from calliope.domain.enums import ProfileCapability, ProfileKind
 from calliope.domain.schemas import ChatRequest, ProfileCreate, WorkspaceCreate
 from calliope.ingest.indexer import Reindexer
+from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.profiles import ProfileRepository
 from calliope.repositories.workspaces import WorkspaceRepository
 from fastapi import Depends
@@ -186,6 +187,40 @@ def test_openapi_contains_conversation_folder_routes() -> None:
     paths = response.json()["paths"]
     assert {"get", "post"} <= set(paths["/v1/conversation-folders"])
     assert {"patch", "delete"} <= set(paths["/v1/conversation-folders/{folder_id}"])
+
+
+def test_documents_route_filters_by_workspace_id(db_session: Session) -> None:
+    workspace_repo = WorkspaceRepository(db_session)
+    first_workspace = workspace_repo.create(
+        WorkspaceCreate(name="First World", root_path="/tmp/first-world")
+    )
+    second_workspace = workspace_repo.create(
+        WorkspaceCreate(name="Second World", root_path="/tmp/second-world")
+    )
+    document_repo = DocumentRepository(db_session)
+    document_repo.upsert(
+        workspace_id=first_workspace.id,
+        path="first/note.md",
+        title="First Note",
+        frontmatter={},
+        content_hash="abc",
+        modified_at_ns=1_700_000_000_000_000_000,
+    )
+    document_repo.upsert(
+        workspace_id=second_workspace.id,
+        path="second/note.md",
+        title="Second Note",
+        frontmatter={},
+        content_hash="def",
+        modified_at_ns=1_700_000_000_000_000_001,
+    )
+    db_session.commit()
+    client = _chat_client_with_session(db_session)
+
+    response = client.get("/v1/documents", params={"workspace_id": first_workspace.id})
+
+    assert response.status_code == 200
+    assert [document["path"] for document in response.json()] == ["first/note.md"]
 
 
 def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(

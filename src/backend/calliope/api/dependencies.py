@@ -54,6 +54,7 @@ def get_chat_client(
         policy,
         prefer_min_p=profile.prefer_min_p,
         sampling_override=profile.sampling_override,
+        max_tokens=settings.default_max_tokens,
     )
     return OpenAICompatibleClient(
         base_url=profile.base_url,
@@ -80,6 +81,7 @@ def get_chat_client_for_profile(
         policy,
         prefer_min_p=profile.prefer_min_p,
         sampling_override=profile.sampling_override,
+        max_tokens=settings.default_max_tokens,
     )
     return OpenAICompatibleClient(
         base_url=profile.base_url,

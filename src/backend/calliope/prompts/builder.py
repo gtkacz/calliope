@@ -39,11 +39,67 @@ POLICY_TEXT: dict[CanonPolicy, str] = {
     ),
 }
 
+# Grounding rules for the document-producing surfaces (write/edit). POLICY_TEXT is
+# authored for Q&A answers: its GROUNDED/INFERRED/INVENTED markers and inline path
+# citations are correct in a chat reply but would print verbatim into the canvas
+# and corrupt the prose. These variants express the same fidelity contract without
+# any in-body annotation, and they never emit a refusal string into the document —
+# on insufficient sources they preserve the canvas instead of overwriting it.
+WRITE_POLICY_TEXT: dict[CanonPolicy, str] = {
+    CanonPolicy.STRICT_CANON: (
+        "Do not contradict or deviate from the indexed canon sources provided below.\n"
+        "Every detail you write must be traceable to those sources.\n"
+        "If the indexed sources contain insufficient information to apply the instruction, "
+        "preserve the current canvas exactly as-is and make no changes. "
+        "NEVER refuse to produce the document.\n"
+        "Do NOT invent, extrapolate, or draw on knowledge outside the provided sources."
+    ),
+    CanonPolicy.CANON_PLUS_INFERENCE: (
+        "Write primarily from the indexed canon sources provided below.\n"
+        "You may make cautious inferences when they follow directly and necessarily from the "
+        "sources, but do not speculate beyond what the sources directly support.\n"
+        "If neither canon nor direct inference provides enough ground to apply the instruction, "
+        "preserve the current canvas exactly as-is and make no changes."
+    ),
+    CanonPolicy.CREATIVE_BUT_CONSISTENT: (
+        "Write creatively while staying fully consistent with the indexed canon sources "
+        "provided below.\n"
+        "You may invent new details freely, but you must never contradict a canon source.\n"
+        "If you cannot construct a consistent result, preserve the current canvas exactly as-is "
+        "rather than contradicting canon."
+    ),
+}
+
 # Appended last to every user message to counteract recency bias toward
 # training-data knowledge over the injected sources.
 _RECENCY_REMINDER = (
     "Remember: answer based on the context above. "
     "Do not introduce information not present in the sources or your explicit inferences."
+)
+
+# Write/edit counterpart to _RECENCY_REMINDER. "answer" framing primes short,
+# answer-shaped output; this reframes the task as producing a full document and
+# reinforces the completeness contract without over-constraining creative policies.
+_WRITE_RECENCY_REMINDER = (
+    "Produce the complete document based on the canvas and instruction above. "
+    "The canon sources constrain consistency, not length. "
+    "Reproduce every unchanged section verbatim."
+)
+
+# Static scaffold for write/edit system prompts. The forbidden-pattern list and the
+# verbatim-copy mandate are the prompt-level half of the truncation fix: even with an
+# explicit max_tokens, small instruction-tuned models treat "return the complete
+# document" as license to abbreviate untouched sections with placeholders.
+_COMPLETENESS_CONTRACT = (
+    "COMPLETENESS — this is a hard rule, not a preference:\n"
+    "- You MUST emit the ENTIRE document on every turn, start to finish, without exception.\n"
+    "- NEVER omit, abbreviate, or stub any section, regardless of how small the instruction is.\n"
+    "- The following patterns are FORBIDDEN and constitute a failure of this task:\n"
+    '    "...", "[rest unchanged]", "[continue as before]", "(rest of section omitted)",\n'
+    '    "[previous content]", "[section omitted for brevity]", "[unchanged]",\n'
+    '    "as before", "etc.", or any other placeholder implying omitted content.\n'
+    "- For every section the instruction does NOT address: copy it verbatim, "
+    "character-for-character, without paraphrasing, summarising, or shortening."
 )
 
 
@@ -94,11 +150,17 @@ def build_chat_messages(
     return messages
 
 
+# A title only needs the gist of the answer; sending a full (now up to several
+# thousand token) response wastes the call and lets the answer dominate framing.
+_TITLE_ANSWER_EXCERPT_CHARS = 400
+
+
 def build_conversation_title_messages(
     *,
     user_message: str,
     assistant_answer: str,
 ) -> list[dict[str, str]]:
+    answer_excerpt = assistant_answer[:_TITLE_ANSWER_EXCERPT_CHARS]
     return [
         {
             "role": "system",
@@ -111,9 +173,7 @@ def build_conversation_title_messages(
         {
             "role": "user",
             "content": (
-                f"First user prompt:\n{user_message}\n\n"
-                f"Assistant answer:\n{assistant_answer}\n\n"
-                "Title:"
+                f"First user prompt:\n{user_message}\n\nAssistant answer:\n{answer_excerpt}"
             ),
         },
     ]
@@ -143,18 +203,32 @@ def build_write_messages(
         user_parts.append(f"User-cited canon (treat as authoritative):\n{cited_blocks}")
 
     user_parts.append(f"Indexed canon sources:\n{source_blocks}")
-    user_parts.append(_RECENCY_REMINDER)
+    user_parts.append(_WRITE_RECENCY_REMINDER)
 
     system_msg: dict[str, str] = {
         "role": "system",
         "content": (
             "You are Calliope, collaborating on a single living markdown document "
             "(the canvas).\n"
-            "Apply the user instruction to the current canvas and return ONLY the "
-            "complete revised markdown.\n"
-            "Return NO commentary and NO code fences.\n"
-            f"{POLICY_TEXT[policy]}\n"
-            "Cite sources by path where canon is used."
+            "Your task is to apply the writer's instruction to the current canvas and "
+            "return the complete revised document.\n"
+            "The canvas in the user message is the sole source of document state; do not "
+            "rely on conversation history for the document's prior content.\n\n"
+            "OUTPUT CONTRACT — read this carefully before generating any text:\n"
+            "- Return ONLY the raw markdown of the revised document, from the very first "
+            "character to the very last.\n"
+            "- Do NOT wrap output in code fences (no ```markdown, no ``` of any kind).\n"
+            "- Do NOT add any preamble, commentary, explanation, or sign-off before or "
+            "after the document.\n"
+            '- Do NOT insert grounding markers, citation tags, "(inference)", '
+            '"(invented)", or "[path/to/file.md]" anywhere in the document body. '
+            "Canon sources constrain what you may write, not how you annotate it.\n\n"
+            f"{_COMPLETENESS_CONTRACT}\n"
+            "- If the canvas is empty, create the document from scratch based on the "
+            "instruction and sources.\n"
+            "- If you reach what feels like a natural stopping point before the document "
+            "is complete: keep writing. There is no partial credit.\n\n"
+            f"GROUNDING:\n{WRITE_POLICY_TEXT[policy]}"
         ),
     }
     user_msg: dict[str, str] = {
@@ -181,14 +255,27 @@ def build_document_edit_messages(
         mode_instruction = (
             "Return ONLY the new markdown to append (do not repeat existing content)."
         )
+        # APPEND returns only the addition, so the full-document recency reminder
+        # ("reproduce every unchanged section") would contradict the mode.
+        recency = (
+            "Base the appended markdown on the document and canon context above. "
+            "The canon sources constrain consistency, not length."
+        )
     else:
-        mode_instruction = "Return the COMPLETE revised markdown document."
+        mode_instruction = (
+            "Return the COMPLETE revised markdown document.\n" + _COMPLETENESS_CONTRACT
+        )
+        recency = _WRITE_RECENCY_REMINDER
 
     system_content = (
         "You are Calliope, an editor for markdown documents.\n"
-        f"{mode_instruction}\n"
-        f"{POLICY_TEXT[policy]}\n"
-        "Return ONLY the resulting markdown with NO commentary and NO code fences.\n"
+        f"{mode_instruction}\n\n"
+        "OUTPUT CONTRACT — read this carefully before generating any text:\n"
+        "- Return ONLY the resulting markdown with NO commentary and NO code fences.\n"
+        '- Do NOT insert grounding markers, citation tags, "(inference)", "(invented)", '
+        'or "[path/to/file.md]" anywhere in the output. Canon sources constrain '
+        "consistency, not annotation.\n\n"
+        f"{WRITE_POLICY_TEXT[policy]}\n\n"
         "If the instruction asks you to invent content that contradicts the document's "
         "established facts, note the contradiction and decline rather than override it."
     )
@@ -199,7 +286,7 @@ def build_document_edit_messages(
         source_blocks = "\n\n".join(_format_source(source) for source in sources)
         user_content += f"\n\nCanon context for this document:\n{source_blocks}"
 
-    user_content += f"\n\n{_RECENCY_REMINDER}"
+    user_content += f"\n\n{recency}"
 
     return [
         {"role": "system", "content": system_content},

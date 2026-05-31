@@ -13,8 +13,9 @@ router = APIRouter()
 @router.get("/v1/documents", response_model=list[DocumentRead])
 def list_documents(
     session: Annotated[Session, Depends(get_db_session)],
+    workspace_id: str | None = None,
 ) -> list[DocumentRead]:
-    return DocumentRepository(session).list()
+    return DocumentRepository(session).list(workspace_id=workspace_id)
 
 
 @router.get("/v1/documents/{document_id}", response_model=DocumentRead)

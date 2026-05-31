@@ -1,16 +1,20 @@
 from typing import Annotated
 
 from calliope.api.dependencies import (
+    api_key_for,
     get_chat_client_for_profile,
     get_db_session,
     get_embedding_client,
     get_settings,
 )
 from calliope.config import Settings
+from calliope.domain.enums import ProfileCapability
 from calliope.domain.schemas import ChatRequest, ChatResponse
 from calliope.ingest.indexer import EmbeddingClient
-from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
+from calliope.llm.openai_compatible import OpenAICompatibleRerankClient
+from calliope.retrieval.hybrid import RerankClient, _AsyncRunner, aclose_client
 from calliope.services.chat import ChatClient, ChatService
+from calliope.services.profiles import ProfileService
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -29,6 +33,7 @@ def chat(
             session,
             request.chat_profile_id,
             settings,
+            request.policy,
         )
     except Exception:
         runner = _AsyncRunner()
@@ -40,12 +45,29 @@ def chat(
             runner.close()
         raise
 
+    rerank_client: RerankClient | None = None
+    if request.chat_profile_id is not None:
+        profile = ProfileService(session).require_capability_by_id(
+            request.chat_profile_id,
+            ProfileCapability.CHAT,
+        )
+        if ProfileCapability.RERANK in profile.capabilities:
+            rerank_client = OpenAICompatibleRerankClient(
+                base_url=profile.base_url,
+                model=profile.model,
+                api_key=api_key_for(profile),
+                timeout_seconds=settings.llm_request_timeout_seconds,
+            )
+
     service = ChatService(
         session,
         embedding_client=embedding_client,
         chat_client=chat_client,
         close_embedding_client=True,
         close_chat_client=True,
+        close_rerank_client=True,
+        score_threshold=settings.retrieval_score_threshold,
+        rerank_client=rerank_client,
     )
     operation_error: Exception | None = None
     try:

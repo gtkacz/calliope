@@ -77,7 +77,7 @@ def test_chat_service_persists_frontend_messages_and_returns_session_payload(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -125,7 +125,7 @@ def test_chat_service_updates_existing_session_summary_after_new_turn(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -221,7 +221,7 @@ def test_chat_service_reuses_one_event_loop_for_shared_embedding_and_chat_client
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -273,7 +273,7 @@ def test_chat_service_closes_owned_clients_on_shared_async_loop(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 

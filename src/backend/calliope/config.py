@@ -9,6 +9,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 EMBEDDING_DIMENSIONS = 1024
 DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
 
+# RRF scores top out ~0.033 for rank-1; 0.005 eliminates only true noise
+# (rank >> 100 from both sources) while keeping at least one result unless
+# the entire candidate set is empty.
+RETRIEVAL_SCORE_THRESHOLD_DEFAULT: float = 0.005
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CALLIOPE_", env_file=".env", extra="ignore")
@@ -31,3 +36,4 @@ class Settings(BaseSettings):
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )
+    retrieval_score_threshold: float = Field(default=RETRIEVAL_SCORE_THRESHOLD_DEFAULT, ge=0.0)

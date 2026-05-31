@@ -23,7 +23,7 @@ def test_source_reference_contains_citation_fields() -> None:
         chunk_id="chunk_1",
         path="characters/kaelen.md",
         heading="Biography > Exile",
-        excerpt="After the Second Winter War",
+        context="After the Second Winter War",
         score=0.87,
     )
 
@@ -32,7 +32,7 @@ def test_source_reference_contains_citation_fields() -> None:
     assert source.chunk_id == "chunk_1"
     assert source.path == "characters/kaelen.md"
     assert "Exile" in source.heading
-    assert source.excerpt == "After the Second Winter War"
+    assert source.context == "After the Second Winter War"
 
 
 def test_enums_cover_mvp_values() -> None:

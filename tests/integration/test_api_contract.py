@@ -30,6 +30,7 @@ class FakeOpenAICompatibleClient:
         model: str,
         api_key: str | None = None,
         timeout_seconds: float = 120,
+        sampling_params: object = None,
     ) -> None:
         self.base_url = base_url
         self.model = model
@@ -212,6 +213,7 @@ def test_chat_route_closes_embedding_client_when_chat_client_creation_fails(
         session: object,
         profile_id: str | None,
         settings: object,
+        policy: object = None,
     ) -> object:
         assert profile_id is None
         raise RuntimeError("chat client setup failed")

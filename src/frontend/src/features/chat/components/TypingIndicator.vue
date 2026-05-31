@@ -27,7 +27,7 @@
 
 .typing-indicator__dots {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.32rem;
 }
 

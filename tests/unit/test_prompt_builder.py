@@ -9,7 +9,7 @@ def test_build_chat_messages_includes_strict_policy_and_sources() -> None:
         chunk_id="chunk_1",
         path="characters/kaelen.md",
         heading="Kaelen",
-        excerpt="Kaelen was exiled from Velmora.",
+        context="Kaelen was exiled from Velmora.",
         score=0.9,
     )
 

@@ -52,7 +52,7 @@ class ChunkRepository:
             chunk_id=chunk.id,
             path=str(chunk.metadata_json.get("path", "")),
             heading=chunk.heading_path,
-            excerpt=chunk.text[:300],
+            context=chunk.text,
             score=score,
         )
 

@@ -62,7 +62,7 @@ def test_search_service_persists_search_result_turn(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -102,7 +102,7 @@ def test_search_service_persists_into_existing_session_and_updates_summary(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -159,7 +159,7 @@ def test_search_service_missing_session_id_persists_nothing(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -202,7 +202,7 @@ def test_search_service_new_session_title_is_capped_at_80_chars(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -275,7 +275,7 @@ def test_search_reuses_embedding_event_loop_for_repeated_sync_calls(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 
@@ -328,7 +328,7 @@ def test_search_service_closes_owned_embedding_client_on_embedding_loop(
             chunk_id=chunk_id,
             path="characters/kaelen.md",
             heading="Kaelen",
-            excerpt="Kaelen exile",
+            context="Kaelen exile",
             score=score,
         )
 

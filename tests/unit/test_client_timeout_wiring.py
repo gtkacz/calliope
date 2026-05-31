@@ -49,6 +49,7 @@ class RecordingClient:
         model: str,
         api_key: str | None = None,
         timeout_seconds: float = 30,
+        sampling_params: object = None,
     ) -> None:
         self.constructed.append(
             {

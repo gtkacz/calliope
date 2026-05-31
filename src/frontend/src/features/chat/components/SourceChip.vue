@@ -40,7 +40,7 @@ function open() {
         aria-hidden="true"
       />
     </span>
-    <span class="source-chip__excerpt">{{ source.excerpt }}</span>
+    <span class="source-chip__excerpt">{{ source.context }}</span>
   </button>
 </template>
 

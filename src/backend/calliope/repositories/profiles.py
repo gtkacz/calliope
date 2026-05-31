@@ -19,6 +19,8 @@ class ProfileRepository:
             model=payload.model,
             api_key_ref=payload.api_key_ref,
             capabilities_json=[capability.value for capability in payload.capabilities],
+            prefer_min_p=payload.prefer_min_p,
+            sampling_override_json=payload.sampling_override,
         )
         self.session.add(profile)
         try:
@@ -73,6 +75,10 @@ class ProfileRepository:
             profile.api_key_ref = payload.api_key_ref
         if payload.capabilities is not None:
             profile.capabilities_json = [capability.value for capability in payload.capabilities]
+        if payload.prefer_min_p is not None:
+            profile.prefer_min_p = payload.prefer_min_p
+        if payload.sampling_override is not None or "sampling_override" in payload.model_fields_set:
+            profile.sampling_override_json = payload.sampling_override
         try:
             self.session.commit()
         except IntegrityError as exc:
@@ -114,5 +120,7 @@ class ProfileRepository:
             capabilities=[
                 ProfileCapability(capability) for capability in profile.capabilities_json
             ],
+            prefer_min_p=profile.prefer_min_p,
+            sampling_override=profile.sampling_override_json,
             created_at=profile.created_at,
         )

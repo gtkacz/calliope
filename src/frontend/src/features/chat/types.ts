@@ -6,7 +6,7 @@ export interface SourceReference {
   chunk_id: string
   path: string
   heading: string
-  excerpt: string
+  context: string
   score: number
 }
 

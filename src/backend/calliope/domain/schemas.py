@@ -92,6 +92,8 @@ class ProfileCreate(BaseModel):
     model: str
     api_key_ref: str | None = None
     capabilities: list[ProfileCapability]
+    prefer_min_p: bool = True
+    sampling_override: dict[str, Any] | None = None
 
 
 class ProfilePatch(BaseModel):
@@ -101,6 +103,8 @@ class ProfilePatch(BaseModel):
     model: str | None = None
     api_key_ref: str | None = None
     capabilities: list[ProfileCapability] | None = None
+    prefer_min_p: bool | None = None
+    sampling_override: dict[str, Any] | None = None
 
 
 class ProfileRead(ProfileCreate):
@@ -113,7 +117,7 @@ class SourceReference(BaseModel):
     chunk_id: str
     path: str
     heading: str
-    excerpt: str
+    context: str
     score: float
 
 
@@ -146,7 +150,9 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     workspace_id: str | None = None
     chat_profile_id: str | None = None
-    limit: int = Field(default=8, ge=1, le=50)
+    # 5 × ~1800 chars ≈ 9 000 chars of source text; fits comfortably within
+    # typical context windows without the prompt budget concern of limit=8.
+    limit: int = Field(default=5, ge=1, le=50)
     cited_document_ids: list[str] = Field(default_factory=list)
 
 
@@ -260,7 +266,9 @@ class WriteRequest(BaseModel):
     session_id: str | None = None
     workspace_id: str | None = None
     chat_profile_id: str | None = None
-    limit: int = Field(default=8, ge=1, le=50)
+    # 5 × ~1800 chars ≈ 9 000 chars of source text; fits comfortably within
+    # typical context windows without the prompt budget concern of limit=8.
+    limit: int = Field(default=5, ge=1, le=50)
     cited_document_ids: list[str] = Field(default_factory=list)
 
 

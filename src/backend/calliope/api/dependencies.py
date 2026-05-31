@@ -4,9 +4,10 @@ from typing import Annotated
 
 from calliope.config import Settings
 from calliope.db.session import create_session_factory
-from calliope.domain.enums import ProfileCapability
+from calliope.domain.enums import CanonPolicy, ProfileCapability
 from calliope.domain.schemas import ProfileRead
 from calliope.llm.openai_compatible import OpenAICompatibleClient
+from calliope.llm.sampling import resolve_sampling_params
 from calliope.services.profiles import ProfileService
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
@@ -46,13 +47,20 @@ def get_embedding_client(
 def get_chat_client(
     session: Annotated[Session, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_settings)],
+    policy: CanonPolicy = CanonPolicy.STRICT_CANON,
 ) -> OpenAICompatibleClient:
     profile = ProfileService(session).require_default_capability(ProfileCapability.CHAT)
+    params = resolve_sampling_params(
+        policy,
+        prefer_min_p=profile.prefer_min_p,
+        sampling_override=profile.sampling_override,
+    )
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
         timeout_seconds=settings.llm_request_timeout_seconds,
+        sampling_params=params,
     )
 
 
@@ -60,16 +68,23 @@ def get_chat_client_for_profile(
     session: Session,
     profile_id: str | None,
     settings: Settings,
+    policy: CanonPolicy = CanonPolicy.STRICT_CANON,
 ) -> OpenAICompatibleClient:
     if profile_id is None:
-        return get_chat_client(session, settings)
+        return get_chat_client(session, settings, policy)
     profile = ProfileService(session).require_capability_by_id(
         profile_id,
         ProfileCapability.CHAT,
+    )
+    params = resolve_sampling_params(
+        policy,
+        prefer_min_p=profile.prefer_min_p,
+        sampling_override=profile.sampling_override,
     )
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
         timeout_seconds=settings.llm_request_timeout_seconds,
+        sampling_params=params,
     )

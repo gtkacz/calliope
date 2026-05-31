@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from calliope.domain.enums import EditMode
-from calliope.domain.schemas import EditProposal, EditProposalRequest
+from calliope.domain.enums import CanonPolicy, EditMode
+from calliope.domain.schemas import EditProposal, EditProposalRequest, SourceReference
 from calliope.prompts.builder import build_document_edit_messages
 from calliope.retrieval.hybrid import _AsyncRunner, aclose_client
 from calliope.services.filesystem import FilesystemService
@@ -26,12 +26,20 @@ class EditorService:
         self._async_runner = _AsyncRunner()
         self._close_chat_client = close_chat_client
 
-    def propose(self, request: EditProposalRequest) -> EditProposal:
+    def propose(
+        self,
+        request: EditProposalRequest,
+        *,
+        policy: CanonPolicy = CanonPolicy.CANON_PLUS_INFERENCE,
+        sources: list[SourceReference] | None = None,
+    ) -> EditProposal:
         current = self.filesystem.read_file(request.path)
         messages = build_document_edit_messages(
             content=current.content,
             instruction=request.instruction,
             mode=request.mode,
+            policy=policy,
+            sources=sources,
         )
         generated = self._async_runner.run(self.chat_client.chat(messages))
 

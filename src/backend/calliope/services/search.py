@@ -1,7 +1,7 @@
 from calliope.domain.schemas import SearchRequest, SearchResponse
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
-from calliope.retrieval.hybrid import EmbeddingClient, HybridRetriever, _AsyncRunner
+from calliope.retrieval.hybrid import EmbeddingClient, HybridRetriever, RerankClient, _AsyncRunner
 from sqlalchemy.orm import Session
 
 
@@ -13,9 +13,13 @@ class SearchService:
         *,
         async_runner: _AsyncRunner | None = None,
         close_embedding_client: bool = False,
+        score_threshold: float = 0.0,
+        rerank_client: RerankClient | None = None,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
+        self._score_threshold = score_threshold
+        self._rerank_client = rerank_client
         self._retriever = HybridRetriever(
             self.session,
             self.embedding_client,
@@ -28,6 +32,8 @@ class SearchService:
             request.query,
             workspace_id=request.workspace_id,
             limit=request.limit,
+            score_threshold=self._score_threshold,
+            rerank_client=self._rerank_client,
         )
         chunk_repo = ChunkRepository(self.session)
         sources = [chunk_repo.source_for_chunk(hit.chunk_id, hit.score) for hit in hits]

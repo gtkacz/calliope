@@ -223,6 +223,11 @@ class ConnectionProfile(Base):
     model: Mapped[str] = mapped_column(Text, nullable=False)
     api_key_ref: Mapped[str | None] = mapped_column(Text)
     capabilities_json: Mapped[list[str]] = mapped_column(JSONB, nullable=False)
+    # server_default=true preserves local-backend behaviour for all existing rows
+    # without a data migration step.
+    prefer_min_p: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    # Nullable: operators who are happy with policy defaults leave this unset.
+    sampling_override_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -15,8 +15,13 @@ from calliope.domain.schemas import (
     SessionSummary,
     SourceReference,
 )
+from calliope.prompts.builder import HistoryTurn
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+
+# 8 000 chars ≈ 2 000 tokens at a 4-char/token ratio. Keeps history within
+# a safe fraction of a 4k-token context window without a tokenizer dependency.
+HISTORY_MAX_CHARS: int = 8_000
 
 
 class ChatRepository:
@@ -142,6 +147,33 @@ class ChatRepository:
         chat_session = self.get_session_row(session_id)
         self.session.delete(chat_session)
         self.session.commit()
+
+    def get_recent_history(
+        self,
+        session_id: str,
+        max_chars: int = HISTORY_MAX_CHARS,
+    ) -> list[HistoryTurn]:
+        rows = self.session.scalars(
+            select(ChatMessage)
+            .where(
+                ChatMessage.session_id == session_id,
+                ChatMessage.role.in_(["user", "assistant"]),
+            )
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+        ).all()
+
+        turns: list[HistoryTurn] = []
+        total_chars = 0
+        for row in rows:
+            if total_chars + len(row.content) > max_chars:
+                break
+            total_chars += len(row.content)
+            turns.append(HistoryTurn(role=row.role, content=row.content))
+
+        # DESC lets us stop accumulating once the budget is hit without fetching
+        # all history rows; reverse to present turns in chronological order.
+        turns.reverse()
+        return turns
 
     def get_session_row(self, session_id: str) -> ChatSession:
         chat_session = self.session.get(ChatSession, session_id)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import threading
 from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from dataclasses import dataclass
@@ -12,9 +13,15 @@ from calliope.llm.openai_compatible import verify_embedding_dimension
 from sqlalchemy import bindparam, func, select
 from sqlalchemy.orm import Session
 
+logger = logging.getLogger(__name__)
+
 
 class EmbeddingClient(Protocol):
     async def embed(self, text: str) -> list[float]: ...
+
+
+class RerankClient(Protocol):
+    async def rerank(self, query: str, documents: list[str]) -> list[float]: ...
 
 
 async def aclose_client(client: object) -> None:
@@ -121,17 +128,48 @@ class HybridRetriever:
         *,
         workspace_id: str | None = None,
         limit: int = 8,
+        score_threshold: float = 0.0,
+        rerank_client: RerankClient | None = None,
     ) -> list[FusedHit]:
         embedding = verify_embedding_dimension(
             self._async_runner.run(self.embedding_client.embed(query)),
             EMBEDDING_DIMENSIONS,
             model=getattr(self.embedding_client, "model", None),
         )
-        search_limit = limit * 2
+        # Fetch more candidates when reranking so the reranker has a richer pool.
+        over_fetch = 3 if rerank_client is not None else 2
+        search_limit = limit * over_fetch
         vector_ids = self._vector_search(embedding, workspace_id=workspace_id, limit=search_limit)
         lexical_ids = self._lexical_search(query, workspace_id=workspace_id, limit=search_limit)
 
-        return fuse_ranked_results(vector_ids, lexical_ids)[:limit]
+        fused = fuse_ranked_results(vector_ids, lexical_ids)
+
+        if rerank_client is not None:
+            try:
+                texts = self._fetch_chunk_texts(fused)
+                scores = self._async_runner.run(rerank_client.rerank(query, texts))
+                fused = [
+                    FusedHit(chunk_id=h.chunk_id, score=s)
+                    for h, s in zip(fused, scores, strict=True)
+                ]
+                fused.sort(key=lambda h: h.score, reverse=True)
+            except Exception:
+                logger.warning("rerank failed, falling back to RRF order", exc_info=True)
+
+        filtered = [h for h in fused if h.score >= score_threshold]
+
+        # Preserve the non-empty guarantee: if the threshold drops everything but
+        # the raw candidate pool was non-empty, keep the single best hit so the
+        # caller always has something to ground the response on.
+        if not filtered and fused:
+            filtered = fused[:1]
+            logger.warning(
+                "retrieval_score_threshold %.4f dropped all %d candidates; keeping top-1",
+                score_threshold,
+                len(fused),
+            )
+
+        return filtered[:limit]
 
     def close(self) -> None:
         cleanup_error: Exception | None = None
@@ -150,6 +188,12 @@ class HybridRetriever:
 
         if cleanup_error is not None:
             raise cleanup_error
+
+    def _fetch_chunk_texts(self, hits: list[FusedHit]) -> list[str]:
+        chunk_ids = [h.chunk_id for h in hits]
+        rows = self.session.scalars(select(Chunk).where(Chunk.id.in_(chunk_ids))).all()
+        text_by_id = {row.id: row.text for row in rows}
+        return [text_by_id.get(h.chunk_id, "") for h in hits]
 
     def _vector_search(
         self,

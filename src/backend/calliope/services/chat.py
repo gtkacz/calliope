@@ -4,11 +4,11 @@ from typing import Protocol
 
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
-from calliope.prompts.builder import build_chat_messages
+from calliope.prompts.builder import HistoryTurn, build_chat_messages
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
-from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner, aclose_client
+from calliope.retrieval.hybrid import EmbeddingClient, RerankClient, _AsyncRunner, aclose_client
 from calliope.services.search import SearchService
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,9 @@ class ChatService:
         chat_client: ChatClient,
         close_embedding_client: bool = False,
         close_chat_client: bool = False,
+        close_rerank_client: bool = False,
+        score_threshold: float = 0.0,
+        rerank_client: RerankClient | None = None,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
@@ -33,6 +36,9 @@ class ChatService:
         self._async_runner = _AsyncRunner()
         self._close_embedding_client = close_embedding_client
         self._close_chat_client = close_chat_client
+        self._close_rerank_client = close_rerank_client
+        self._score_threshold = score_threshold
+        self._rerank_client = rerank_client
 
     def chat(self, request: ChatRequest) -> ChatResponse:
         repository = ChatRepository(self.session)
@@ -51,10 +57,16 @@ class ChatService:
                     status_code=403,
                 )
 
+        history: list[HistoryTurn] | None = None
+        if request.session_id is not None:
+            history = repository.get_recent_history(request.session_id)
+
         search_service = SearchService(
             self.session,
             self.embedding_client,
             async_runner=self._async_runner,
+            score_threshold=self._score_threshold,
+            rerank_client=self._rerank_client,
         )
         try:
             search_response = search_service.search(
@@ -99,6 +111,7 @@ class ChatService:
             policy=request.policy,
             sources=search_response.sources,
             cited_documents=cited_documents or None,
+            history=history,
         )
         answer = self._async_runner.run(self.chat_client.chat(messages))
 
@@ -169,6 +182,12 @@ class ChatService:
             if self._close_chat_client and id(self.chat_client) not in closed_client_ids:
                 try:
                     self._async_runner.run(aclose_client(self.chat_client))
+                except Exception as exc:
+                    if cleanup_error is None:
+                        cleanup_error = exc
+            if self._close_rerank_client and self._rerank_client is not None:
+                try:
+                    self._async_runner.run(aclose_client(self._rerank_client))
                 except Exception as exc:
                     if cleanup_error is None:
                         cleanup_error = exc

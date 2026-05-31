@@ -80,7 +80,10 @@ class WorkspaceRepository:
     def find_by_path(self, absolute_path: str) -> Workspace | None:
         """Return the workspace whose root_path contains the given absolute path,
         preferring the longest (most specific) root when several overlap."""
-        target = Path(absolute_path)
+        try:
+            target = Path(absolute_path).resolve()
+        except OSError:
+            return None
         best: Workspace | None = None
         best_len = -1
         for workspace in self.session.scalars(select(Workspace)).all():

@@ -1,5 +1,5 @@
 export type CanonPolicy = 'strict_canon' | 'canon_plus_inference' | 'creative_but_consistent'
-export type ComposerMode = 'chat' | 'search'
+export type ComposerMode = 'chat' | 'search' | 'write'
 
 export interface SourceReference {
   document_id: string
@@ -39,6 +39,7 @@ export interface MessageRead {
 
 export interface SessionDetail extends SessionSummary {
   messages: MessageRead[]
+  canvas: string | null
 }
 
 export interface ChatResponse {
@@ -54,4 +55,13 @@ export interface SearchResponse {
   sources: SourceReference[]
   session: SessionSummary | null
   search_message: MessageRead | null
+}
+
+export interface WriteResponse {
+  session: SessionSummary
+  user_message: MessageRead
+  assistant_message: MessageRead
+  canvas: string
+  sources: SourceReference[]
+  trace_id: string
 }

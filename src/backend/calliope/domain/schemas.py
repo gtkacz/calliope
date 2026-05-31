@@ -243,11 +243,34 @@ class ChatResponse(BaseModel):
 
 class SessionDetail(SessionSummary):
     messages: list[MessageRead]
+    canvas: str | None = None
 
 
 class SessionPatch(BaseModel):
     title: str | None = None
     folder_id: str | None = None
+    # None means unchanged; an empty string clears the canvas.
+    canvas: str | None = None
+
+
+class WriteRequest(BaseModel):
+    message: str
+    canvas: str = ""
+    policy: CanonPolicy = CanonPolicy.STRICT_CANON
+    session_id: str | None = None
+    workspace_id: str | None = None
+    chat_profile_id: str | None = None
+    limit: int = Field(default=8, ge=1, le=50)
+    cited_document_ids: list[str] = Field(default_factory=list)
+
+
+class WriteResponse(BaseModel):
+    session: SessionSummary
+    user_message: MessageRead
+    assistant_message: MessageRead
+    canvas: str
+    sources: list[SourceReference]
+    trace_id: str
 
 
 SessionRead = SessionSummary

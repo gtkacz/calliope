@@ -83,7 +83,7 @@ const policyOptions: {
 const disabledReason = computed(() => {
   if (props.pending) return "Waiting for response";
   if (props.workspaces.length === 0) return "Workspace required";
-  if (props.mode === "chat" && props.profiles.length === 0)
+  if ((props.mode === "chat" || props.mode === "write") && props.profiles.length === 0)
     return "Chat profile required";
   return null;
 });
@@ -233,7 +233,7 @@ defineExpose({ prefill });
           variant="plain"
           density="comfortable"
           hide-details
-          placeholder="Ask Calliope, or search your notes…"
+          :placeholder="mode === 'write' ? 'Describe what to write or revise…' : 'Ask Calliope, or search your notes…'"
           class="composer__input"
           @focus="focused = true"
           @blur="focused = false"
@@ -267,6 +267,16 @@ defineExpose({ prefill });
             @click="setMode('search')"
           >
             Search
+          </button>
+          <button
+            type="button"
+            class="composer__segment"
+            :class="{ 'is-active': mode === 'write' }"
+            role="tab"
+            :aria-selected="mode === 'write'"
+            @click="setMode('write')"
+          >
+            Write
           </button>
         </div>
 

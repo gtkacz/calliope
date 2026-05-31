@@ -150,6 +150,9 @@ class ChatSession(Base):
         onupdate=func.now(),
     )
 
+    # Nullable: only write-mode sessions hold a canvas; chat-only sessions leave this NULL.
+    canvas: Mapped[str | None] = mapped_column(Text)
+
     folder: Mapped[ConversationFolder | None] = relationship(back_populates="sessions")
     messages: Mapped[list["ChatMessage"]] = relationship(
         back_populates="session",

@@ -24,6 +24,7 @@ interface ChatState {
   errorMessage: string | null;
   mentionDocuments: DocumentSummary[];
   citedDocumentIds: string[];
+  canvas: string;
 }
 
 export const useChatStore = defineStore("chat", {
@@ -40,12 +41,17 @@ export const useChatStore = defineStore("chat", {
     errorMessage: null,
     mentionDocuments: [],
     citedDocumentIds: [],
+    canvas: "",
   }),
   getters: {
     canSubmit(state): boolean {
       if (state.pending || state.selectedWorkspaceId === null) return false;
-      if (state.mode === "chat" && state.selectedChatProfileId === null)
+      if (
+        (state.mode === "chat" || state.mode === "write") &&
+        state.selectedChatProfileId === null
+      ) {
         return false;
+      }
       return true;
     },
     unfiledSessions(state): SessionSummary[] {
@@ -65,6 +71,7 @@ export const useChatStore = defineStore("chat", {
       const detail = await chatApi.getSession(sessionId);
       this.activeSessionId = detail.id;
       this.messages = detail.messages;
+      this.canvas = detail.canvas ?? "";
     },
     async deleteSession(sessionId: string) {
       await chatApi.deleteSession(sessionId);
@@ -109,6 +116,26 @@ export const useChatStore = defineStore("chat", {
           this.activeSessionId = response.session.id;
           this.upsertSession(response.session);
           this.messages.push(response.user_message, response.assistant_message);
+        } else if (this.mode === "write") {
+          const reconciledIds = this.citedDocumentIds.filter((id) => {
+            const doc = this.mentionDocuments.find((d) => d.id === id);
+            return doc !== undefined && trimmed.includes(`@${doc.path}`);
+          });
+          const response = await chatApi.sendWrite({
+            message: trimmed,
+            canvas: this.canvas,
+            policy: this.policy,
+            session_id: this.activeSessionId,
+            workspace_id: this.selectedWorkspaceId,
+            chat_profile_id: this.selectedChatProfileId as string,
+            limit: 8,
+            cited_document_ids: reconciledIds,
+          });
+          this.citedDocumentIds = [];
+          this.canvas = response.canvas;
+          this.activeSessionId = response.session.id;
+          this.upsertSession(response.session);
+          this.messages.push(response.user_message, response.assistant_message);
         } else {
           const response = await chatApi.sendSearch({
             query: trimmed,
@@ -138,6 +165,16 @@ export const useChatStore = defineStore("chat", {
       );
       if (index === -1) this.sessions.unshift(session);
       else this.sessions.splice(index, 1, session);
+    },
+    async saveCanvas() {
+      if (this.activeSessionId === null) return;
+      try {
+        await chatApi.patchSession(this.activeSessionId, {
+          canvas: this.canvas,
+        });
+      } catch {
+        // Best-effort: autosave must never block editing
+      }
     },
   },
 });

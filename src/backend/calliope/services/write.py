@@ -3,8 +3,13 @@ from __future__ import annotations
 from typing import Protocol
 
 from calliope.domain.errors import AppError
-from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
-from calliope.prompts.builder import build_chat_messages
+from calliope.domain.schemas import (
+    CitedDocument,
+    SearchRequest,
+    WriteRequest,
+    WriteResponse,
+)
+from calliope.prompts.builder import build_write_messages
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
@@ -12,12 +17,14 @@ from calliope.retrieval.hybrid import EmbeddingClient, _AsyncRunner, aclose_clie
 from calliope.services.search import SearchService
 from sqlalchemy.orm import Session
 
+CANVAS_UPDATED_NOTE = "Updated the canvas."
+
 
 class ChatClient(Protocol):
     async def chat(self, messages: list[dict[str, str]]) -> str: ...
 
 
-class ChatService:
+class WriteService:
     def __init__(
         self,
         session: Session,
@@ -34,12 +41,12 @@ class ChatService:
         self._close_embedding_client = close_embedding_client
         self._close_chat_client = close_chat_client
 
-    def chat(self, request: ChatRequest) -> ChatResponse:
+    def write(self, request: WriteRequest) -> WriteResponse:
         repository = ChatRepository(self.session)
         if request.session_id is not None:
             existing = repository.get_session_row(request.session_id)
             # A session is pinned to the workspace captured on its first turn;
-            # refuse to add a turn under a different workspace.
+            # refuse to write a turn into it under a different workspace.
             if (
                 existing.workspace_id is not None
                 and request.workspace_id is not None
@@ -94,14 +101,16 @@ class ChatService:
                 )
             )
 
-        messages = build_chat_messages(
+        messages = build_write_messages(
             message=request.message,
             policy=request.policy,
+            canvas=request.canvas,
             sources=search_response.sources,
             cited_documents=cited_documents or None,
         )
-        answer = self._async_runner.run(self.chat_client.chat(messages))
+        new_canvas = self._async_runner.run(self.chat_client.chat(messages))
 
+        sources = search_response.sources
         try:
             session_id = request.session_id
             if session_id is None:
@@ -115,20 +124,19 @@ class ChatService:
                 session_id=session_id,
                 role="user",
                 content=request.message,
-                metadata={"turn_kind": "chat_user"},
+                metadata={"turn_kind": "write_user"},
             )
+            repository.update_canvas(session_id, new_canvas)
             assistant_message = repository.add_message(
                 session_id=session_id,
                 role="assistant",
-                content=answer,
+                content=CANVAS_UPDATED_NOTE,
                 metadata={
-                    "turn_kind": "assistant",
+                    "turn_kind": "write_assistant",
                     "policy": request.policy.value,
                     "chat_profile_id": request.chat_profile_id,
-                    "source_count": len(search_response.sources),
-                    "sources": [
-                        source.model_dump(mode="json") for source in search_response.sources
-                    ],
+                    "source_count": len(sources),
+                    "sources": [source.model_dump(mode="json") for source in sources],
                     "cited_document_ids": [doc.document_id for doc in cited_documents],
                     "cited_paths": [doc.path for doc in cited_documents],
                 },
@@ -138,8 +146,8 @@ class ChatService:
                 message_id=assistant_message.id,
                 query=request.message,
                 policy=request.policy,
-                sources=search_response.sources,
-                scores={source.chunk_id: source.score for source in search_response.sources},
+                sources=sources,
+                scores={source.chunk_id: source.score for source in sources},
             )
             repository.touch_session(session_id)
             self.session.commit()
@@ -147,12 +155,12 @@ class ChatService:
             self.session.rollback()
             raise
 
-        return ChatResponse(
+        return WriteResponse(
             session=repository.get_session_summary(session_id),
             user_message=repository.message_to_read(user_message),
             assistant_message=repository.message_to_read(assistant_message),
-            answer=answer,
-            sources=search_response.sources,
+            canvas=new_canvas,
+            sources=sources,
             trace_id=trace.id,
         )
 

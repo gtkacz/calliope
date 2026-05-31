@@ -11,6 +11,7 @@ from calliope.api.routes import (
     search,
     sessions,
     workspaces,
+    write,
 )
 from calliope.config import Settings
 from calliope.services.versioning import VersioningService
@@ -63,6 +64,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(filesystem.router)
     app.include_router(editor.router)
+    app.include_router(write.router)
     register_error_handlers(app)
     app.state.settings = resolved_settings
     return app

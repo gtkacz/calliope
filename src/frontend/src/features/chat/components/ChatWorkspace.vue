@@ -12,6 +12,8 @@ import SettingsDialog from "@/features/settings/components/SettingsDialog.vue";
 import ComposerBar from "./ComposerBar.vue";
 import ConversationDrawer from "./ConversationDrawer.vue";
 import ConversationTimeline from "./ConversationTimeline.vue";
+import CanvasPanel from "./CanvasPanel.vue";
+import WriteThread from "./WriteThread.vue";
 import SourceViewerDialog from "./SourceViewerDialog.vue";
 
 const chat = useChatStore();
@@ -24,6 +26,7 @@ const startupLoading = ref(false);
 const apiBaseUrlValue = apiBaseUrl();
 const editorOpen = ref(false);
 const composerRef = ref<{ prefill: (value: string) => void } | null>(null);
+const threadOpen = ref(true);
 
 function applySeed(prompt: string) {
   composerRef.value?.prefill(prompt);
@@ -59,6 +62,7 @@ const needsProfile = computed(
 function startNewConversation() {
   chat.activeSessionId = null;
   chat.messages = [];
+  chat.canvas = "";
 }
 
 const deleteTarget = ref<SessionSummary | null>(null);
@@ -122,6 +126,7 @@ watch(
     if (previous === null || previous === next) return;
     chat.activeSessionId = null;
     chat.messages = [];
+    chat.canvas = "";
     chat.citedDocumentIds = [];
     chat.mentionDocuments = [];
     void chat.refreshConversationList();
@@ -169,6 +174,16 @@ onMounted(loadInitialData);
             @click="editorOpen = true"
           />
           <v-btn
+            v-if="chat.mode === 'write'"
+            :icon="threadOpen ? '$mdi-close' : '$mdi-pencil-outline'"
+            variant="text"
+            size="small"
+            density="comfortable"
+            color="default"
+            :aria-label="threadOpen ? 'Hide iteration thread' : 'Show iteration thread'"
+            @click="threadOpen = !threadOpen"
+          />
+          <v-btn
             class="chat-context__settings"
             icon="$mdi-cog-outline"
             variant="text"
@@ -181,7 +196,14 @@ onMounted(loadInitialData);
         </div>
       </header>
 
-      <div class="chat-body calliope-manuscript-ruling calliope-reading-vignette">
+      <div
+        class="chat-body"
+        :class="{
+          'chat-body--write': chat.mode === 'write',
+          'calliope-manuscript-ruling': chat.mode !== 'write',
+          'calliope-reading-vignette': chat.mode !== 'write',
+        }"
+      >
         <div v-if="startupError" class="chat-fallback">
           <p class="calliope-eyebrow">Connection</p>
           <h1 class="calliope-display-lg chat-fallback__title">
@@ -203,6 +225,20 @@ onMounted(loadInitialData);
             </v-btn>
           </div>
         </div>
+
+        <template v-else-if="chat.mode === 'write'">
+          <CanvasPanel class="chat-body__canvas" />
+          <aside
+            v-if="threadOpen"
+            class="chat-body__thread"
+          >
+            <WriteThread
+              :messages="chat.messages"
+              :pending="chat.pending"
+              :error-message="chat.errorMessage"
+            />
+          </aside>
+        </template>
 
         <ConversationTimeline
           v-else
@@ -404,6 +440,26 @@ onMounted(loadInitialData);
   flex-direction: column;
   overflow: hidden;
   position: relative;
+}
+
+.chat-body--write {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.chat-body__canvas {
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-body__thread {
+  width: 360px;
+  min-width: 340px;
+  max-width: 380px;
+  border-left: 1px solid var(--calliope-border-strong);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-fallback {

@@ -52,6 +52,50 @@ def build_chat_messages(
     ]
 
 
+def build_write_messages(
+    *,
+    message: str,
+    policy: CanonPolicy,
+    canvas: str,
+    sources: list[SourceReference],
+    cited_documents: list[CitedDocument] | None = None,
+) -> list[dict[str, str]]:
+    source_blocks = "\n\n".join(_format_source(source) for source in sources)
+    if not source_blocks:
+        source_blocks = "No indexed canon sources were retrieved."
+
+    canvas_block = canvas if canvas else "(empty — create the document from scratch)"
+    user_parts: list[str] = [
+        f"Current canvas:\n<<<\n{canvas_block}\n>>>",
+        f"Instruction:\n{message}",
+    ]
+
+    if cited_documents:
+        cited_blocks = "\n\n".join(_format_cited_document(doc) for doc in cited_documents)
+        user_parts.append(f"User-cited canon (treat as authoritative):\n{cited_blocks}")
+
+    user_parts.append(f"Indexed canon sources:\n{source_blocks}")
+
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are Calliope, collaborating on a single living markdown document "
+                "(the canvas).\n"
+                "Apply the user instruction to the current canvas and return ONLY the "
+                "complete revised markdown.\n"
+                "Return NO commentary and NO code fences.\n"
+                f"{POLICY_TEXT[policy]}\n"
+                "Cite sources by path where canon is used."
+            ),
+        },
+        {
+            "role": "user",
+            "content": "\n\n".join(user_parts),
+        },
+    ]
+
+
 def build_document_edit_messages(
     *,
     content: str,

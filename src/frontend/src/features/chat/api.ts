@@ -7,6 +7,7 @@ import type {
   SearchResponse,
   SessionDetail,
   SessionSummary,
+  WriteResponse,
 } from "./types";
 
 export function listSessions(
@@ -27,7 +28,7 @@ export function getSession(sessionId: string): Promise<SessionDetail> {
 
 export function patchSession(
   sessionId: string,
-  payload: { title?: string; folder_id?: string | null },
+  payload: { title?: string; folder_id?: string | null; canvas?: string },
 ): Promise<SessionSummary> {
   return requestJson(`/v1/sessions/${sessionId}`, {
     method: "PATCH",
@@ -93,6 +94,22 @@ export function sendSearch(payload: {
   persist: true;
 }): Promise<SearchResponse> {
   return requestJson("/v1/search", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function sendWrite(payload: {
+  message: string;
+  canvas: string;
+  policy: CanonPolicy;
+  session_id: string | null;
+  workspace_id: string | null;
+  chat_profile_id: string;
+  limit: number;
+  cited_document_ids: string[];
+}): Promise<WriteResponse> {
+  return requestJson("/v1/write", {
     method: "POST",
     body: JSON.stringify(payload),
   });

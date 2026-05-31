@@ -114,6 +114,7 @@ class ChatRepository:
             created_at=chat_session.created_at,
             updated_at=chat_session.updated_at,
             messages=[self._message_to_read(message) for message in messages],
+            canvas=chat_session.canvas,
         )
 
     def update_session(self, session_id: str, payload: SessionPatch) -> SessionSummary:
@@ -126,9 +127,16 @@ class ChatRepository:
             chat_session.folder_id = payload.folder_id
         elif "folder_id" in payload.model_fields_set:
             chat_session.folder_id = None
+        if payload.canvas is not None:
+            chat_session.canvas = payload.canvas
         self.session.commit()
         self.session.refresh(chat_session)
         return self._session_to_summary(chat_session)
+
+    def update_canvas(self, session_id: str, canvas: str) -> None:
+        chat_session = self.get_session_row(session_id)
+        chat_session.canvas = canvas
+        self.session.flush()
 
     def delete_session(self, session_id: str) -> None:
         chat_session = self.get_session_row(session_id)

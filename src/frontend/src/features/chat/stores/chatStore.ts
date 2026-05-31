@@ -24,6 +24,7 @@ interface ChatState {
   pendingSince: number | null;
   errorMessage: string | null;
   mentionDocuments: DocumentSummary[];
+  mentionWorkspaceId: string | null;
   citedDocumentIds: string[];
   canvas: string;
 }
@@ -42,6 +43,7 @@ export const useChatStore = defineStore("chat", {
     pendingSince: null,
     errorMessage: null,
     mentionDocuments: [],
+    mentionWorkspaceId: null,
     citedDocumentIds: [],
     canvas: "",
   }),
@@ -86,9 +88,18 @@ export const useChatStore = defineStore("chat", {
       }
     },
     async loadMentionDocuments() {
-      if (this.selectedWorkspaceId === null) return;
+      const workspaceId = this.selectedWorkspaceId;
+      if (workspaceId === null) {
+        this.mentionDocuments = [];
+        this.mentionWorkspaceId = null;
+        return;
+      }
+      this.mentionDocuments = [];
+      this.mentionWorkspaceId = workspaceId;
       try {
-        this.mentionDocuments = await listDocuments(this.selectedWorkspaceId);
+        const documents = await listDocuments(workspaceId);
+        if (this.selectedWorkspaceId !== workspaceId) return;
+        this.mentionDocuments = documents;
       } catch {
         // Swallow errors — mention suggestions are best-effort
       }
@@ -101,9 +112,13 @@ export const useChatStore = defineStore("chat", {
       this.errorMessage = null;
       try {
         if (this.mode === "chat") {
+          const mentionDocuments =
+            this.mentionWorkspaceId === this.selectedWorkspaceId
+              ? this.mentionDocuments
+              : [];
           // Keep only citations whose document path still appears as an @<path> token
           const reconciledIds = this.citedDocumentIds.filter((id) => {
-            const doc = this.mentionDocuments.find((d) => d.id === id);
+            const doc = mentionDocuments.find((d) => d.id === id);
             return doc !== undefined && trimmed.includes(`@${doc.path}`);
           });
           const response = await chatApi.sendChat({
@@ -120,8 +135,12 @@ export const useChatStore = defineStore("chat", {
           this.upsertSession(response.session);
           this.messages.push(response.user_message, response.assistant_message);
         } else if (this.mode === "write") {
+          const mentionDocuments =
+            this.mentionWorkspaceId === this.selectedWorkspaceId
+              ? this.mentionDocuments
+              : [];
           const reconciledIds = this.citedDocumentIds.filter((id) => {
-            const doc = this.mentionDocuments.find((d) => d.id === id);
+            const doc = mentionDocuments.find((d) => d.id === id);
             return doc !== undefined && trimmed.includes(`@${doc.path}`);
           });
           const response = await chatApi.sendWrite({

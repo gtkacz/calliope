@@ -117,8 +117,14 @@ const canSubmit = computed(
 
 const citedDocs = computed<DocumentSummary[]>(() =>
   chat.citedDocumentIds
-    .map((id) => chat.mentionDocuments.find((d) => d.id === id))
+    .map((id) => workspaceMentionDocuments.value.find((d) => d.id === id))
     .filter((d): d is DocumentSummary => d !== undefined),
+);
+
+const workspaceMentionDocuments = computed<DocumentSummary[]>(() =>
+  chat.mentionWorkspaceId === props.selectedWorkspaceId
+    ? chat.mentionDocuments
+    : [],
 );
 
 function detectMention(caretPos: number) {
@@ -228,11 +234,12 @@ defineExpose({ prefill });
           class="composer__citation calliope-mono"
         >
           <v-icon size="11" icon="$mdi-file-document-outline" class="composer__citation-icon" aria-hidden="true" />
-          @{{ doc.title || doc.path }}
+          <span class="composer__citation-title">@{{ doc.title || doc.path }}</span>
+          <span class="composer__citation-path">{{ doc.path }}</span>
           <button
             type="button"
             class="composer__citation-remove"
-            :aria-label="`Remove citation ${doc.title || doc.path}`"
+            :aria-label="`Remove citation ${doc.path}`"
             @click="removeCitation(doc.id)"
           >
             ×
@@ -244,7 +251,7 @@ defineExpose({ prefill });
         <MentionMenu
           v-if="mentionOpen"
           ref="mentionMenuRef"
-          :documents="chat.mentionDocuments"
+          :documents="workspaceMentionDocuments"
           :query="mentionQuery"
           @select="onSelectMention"
         />
@@ -718,6 +725,16 @@ defineExpose({ prefill });
   color: var(--calliope-bronze);
   opacity: 0.75;
   flex-shrink: 0;
+}
+
+.composer__citation-title {
+  color: var(--calliope-bronze);
+  flex: none;
+}
+
+.composer__citation-path {
+  color: var(--calliope-paper-muted);
+  font-size: 0.64rem;
 }
 
 .composer__citation-remove {

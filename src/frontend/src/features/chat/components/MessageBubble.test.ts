@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { describe, expect, it, vi } from 'vitest'
 
 import MessageBubble from './MessageBubble.vue'
@@ -21,5 +21,15 @@ describe('MessageBubble', () => {
     await wrapper.get('[aria-label="Copy message"]').trigger('click')
 
     expect(writeText).toHaveBeenCalledWith(content)
+  })
+
+  it('shows a copied toast after clipboard write succeeds', async () => {
+    mockClipboard()
+    const wrapper = mount(MessageBubble, { props: { content: 'Plain text' } })
+
+    await wrapper.get('[aria-label="Copy message"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Copied to clipboard')
   })
 })

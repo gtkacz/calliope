@@ -46,10 +46,6 @@ function moveHighlight(delta: number) {
   highlightIndex.value = (highlightIndex.value + delta + len) % len;
 }
 
-function filename(path: string): string {
-  return path.split("/").at(-1) ?? path;
-}
-
 defineExpose({ selectHighlighted, moveHighlight });
 </script>
 
@@ -72,7 +68,7 @@ defineExpose({ selectHighlighted, moveHighlight });
       @mousedown.prevent="emit('select', doc)"
     >
       <span class="mention-menu__title">{{ doc.title }}</span>
-      <span class="mention-menu__path">{{ filename(doc.path) }}</span>
+      <span class="mention-menu__path">{{ doc.path }}</span>
     </button>
   </div>
 </template>

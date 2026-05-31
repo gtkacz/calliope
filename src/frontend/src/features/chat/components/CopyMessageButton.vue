@@ -1,15 +1,30 @@
 <script setup lang="ts">
+import { onBeforeUnmount, ref } from 'vue'
+
 defineProps<{
   content: string
 }>()
 
+const copied = ref(false)
+let toastTimeout: ReturnType<typeof setTimeout> | null = null
+
 async function copyMessage(content: string) {
   try {
     await navigator.clipboard.writeText(content)
+    copied.value = true
+    if (toastTimeout !== null) clearTimeout(toastTimeout)
+    toastTimeout = setTimeout(() => {
+      copied.value = false
+      toastTimeout = null
+    }, 1600)
   } catch {
     // Clipboard access can fail outside secure contexts; leave the message intact.
   }
 }
+
+onBeforeUnmount(() => {
+  if (toastTimeout !== null) clearTimeout(toastTimeout)
+})
 </script>
 
 <template>
@@ -26,6 +41,15 @@ async function copyMessage(content: string) {
       </button>
     </template>
   </v-tooltip>
+
+  <div
+    v-if="copied"
+    class="copy-message-toast calliope-mono"
+    role="status"
+    aria-live="polite"
+  >
+    Copied to clipboard
+  </div>
 </template>
 
 <style scoped>
@@ -55,5 +79,22 @@ async function copyMessage(content: string) {
   background: var(--calliope-overlay-hover);
   border-color: var(--calliope-border);
   outline: none;
+}
+
+.copy-message-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  z-index: 4000;
+  transform: translateX(-50%);
+  padding: 0.48rem 0.75rem;
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-pill);
+  background: var(--calliope-ink-top);
+  color: var(--calliope-paper);
+  box-shadow: var(--calliope-shadow-rest);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  pointer-events: none;
 }
 </style>

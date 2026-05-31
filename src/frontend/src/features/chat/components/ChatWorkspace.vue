@@ -129,6 +129,7 @@ watch(
     chat.canvas = "";
     chat.citedDocumentIds = [];
     chat.mentionDocuments = [];
+    chat.mentionWorkspaceId = null;
     void chat.refreshConversationList();
   },
 );

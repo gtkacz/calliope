@@ -271,7 +271,10 @@ def test_chat_route_uses_explicit_chat_profile(
     assert response.status_code == 200
     body = response.json()
     assert body["assistant_message"]["metadata"]["chat_profile_id"] == chat_profile.id
-    assert FakeOpenAICompatibleClient.chat_models == ["explicit-chat-model"]
+    assert FakeOpenAICompatibleClient.chat_models == [
+        "explicit-chat-model",
+        "explicit-chat-model",
+    ]
 
 
 def test_chat_route_returns_404_for_missing_explicit_chat_profile(
@@ -357,7 +360,10 @@ def test_chat_route_omitted_chat_profile_uses_default_chat_profile(
     assert response.status_code == 200
     body = response.json()
     assert body["assistant_message"]["metadata"]["chat_profile_id"] is None
-    assert FakeOpenAICompatibleClient.chat_models == ["default-chat-model"]
+    assert FakeOpenAICompatibleClient.chat_models == [
+        "default-chat-model",
+        "default-chat-model",
+    ]
 
 
 def test_openapi_declares_calliope_contract() -> None:

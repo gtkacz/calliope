@@ -26,6 +26,17 @@ class FakeChatClient:
         return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
 
 
+class RecordingTitleChatClient:
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, str]]] = []
+
+    async def chat(self, messages: list[dict[str, str]]) -> str:
+        self.calls.append(messages)
+        if len(self.calls) == 1:
+            return "Kaelen was exiled from Velmora. [characters/kaelen.md]"
+        return '"Kaelen Exile"'
+
+
 def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> None:
     workspace = WorkspaceRepository(db_session).create(
         WorkspaceCreate(
@@ -59,6 +70,56 @@ def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> 
     assert response.answer
     assert response.user_message.role == "user"
     assert response.assistant_message.role == "assistant"
+
+
+def test_chat_service_titles_new_session_with_separate_llm_call(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_vector_search(self, embedding, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_lexical_search(self, query, *, workspace_id, limit):
+        return ["chunk_a"]
+
+    def fake_source_for_chunk(self, chunk_id, score=1.0):
+        return SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            context="Kaelen exile",
+            score=score,
+        )
+
+    monkeypatch.setattr(HybridRetriever, "_vector_search", fake_vector_search)
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", fake_lexical_search)
+    monkeypatch.setattr(ChunkRepository, "source_for_chunk", fake_source_for_chunk)
+
+    client = RecordingTitleChatClient()
+    service = ChatService(
+        db_session,
+        embedding_client=FakeEmbeddingClient(),
+        chat_client=client,
+    )
+    try:
+        response = service.chat(
+            ChatRequest(
+                message="Where was Kaelen exiled from?",
+                chat_profile_id="profile_chat",
+                limit=1,
+            )
+        )
+    finally:
+        service.close()
+
+    assert len(client.calls) == 2
+    assert "Indexed canon sources" in client.calls[0][-1]["content"]
+    assert "short title" in client.calls[1][0]["content"]
+    assert response.session.title == "Kaelen Exile"
+    assert ChatRepository(db_session).get_session_summary(response.session.id).title == (
+        "Kaelen Exile"
+    )
 
 
 def test_chat_service_persists_frontend_messages_and_returns_session_payload(
@@ -237,7 +298,7 @@ def test_chat_service_reuses_one_event_loop_for_shared_embedding_and_chat_client
     finally:
         service.close()
 
-    assert len(client.loops) == 4
+    assert len(client.loops) == 6
     assert len({id(loop) for loop in client.loops}) == 1
 
 

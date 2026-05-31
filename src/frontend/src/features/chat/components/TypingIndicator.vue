@@ -56,11 +56,12 @@ const elapsedLabel = computed(() => {
 
 <template>
   <div class="typing-indicator" role="status" aria-label="Calliope is thinking">
-    <span class="typing-indicator__role calliope-serif">Calliope</span>
-    <span class="typing-indicator__dots" aria-hidden="true">
-      <span class="typing-indicator__dot" />
-      <span class="typing-indicator__dot" />
-      <span class="typing-indicator__dot" />
+    <span class="typing-indicator__role calliope-serif">
+      Calliope<span class="typing-indicator__dots" aria-hidden="true">
+        <span class="typing-indicator__dot" />
+        <span class="typing-indicator__dot" />
+        <span class="typing-indicator__dot" />
+      </span>
     </span>
     <span
       v-if="elapsedLabel"
@@ -73,11 +74,13 @@ const elapsedLabel = computed(() => {
 <style scoped>
 .typing-indicator {
   display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  align-items: baseline;
+  gap: 0.45rem;
 }
 
 .typing-indicator__role {
+  display: inline-flex;
+  align-items: baseline;
   color: var(--calliope-bronze);
   font-size: 0.95rem;
   letter-spacing: -0.005em;
@@ -86,7 +89,9 @@ const elapsedLabel = computed(() => {
 .typing-indicator__dots {
   display: inline-flex;
   align-items: flex-end;
-  gap: 0.32rem;
+  gap: 0.14rem;
+  margin-left: 0.16rem;
+  transform: translateY(0.03em);
 }
 
 .typing-indicator__elapsed {
@@ -98,8 +103,8 @@ const elapsedLabel = computed(() => {
 }
 
 .typing-indicator__dot {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
   background: var(--calliope-bronze);
   opacity: 0.35;

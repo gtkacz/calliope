@@ -4,7 +4,11 @@ from typing import Protocol
 
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
-from calliope.prompts.builder import HistoryTurn, build_chat_messages
+from calliope.prompts.builder import (
+    HistoryTurn,
+    build_chat_messages,
+    build_conversation_title_messages,
+)
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
@@ -115,11 +119,20 @@ class ChatService:
         )
         answer = self._async_runner.run(self.chat_client.chat(messages))
 
+        new_session_title: str | None = None
+        if request.session_id is None:
+            fallback_title = _fallback_conversation_title(request.message)
+            new_session_title = self._generate_conversation_title(
+                user_message=request.message,
+                assistant_answer=answer,
+                fallback=fallback_title,
+            )
+
         try:
             session_id = request.session_id
             if session_id is None:
                 chat_session = repository.create_session(
-                    title=request.message[:80],
+                    title=new_session_title,
                     workspace_id=request.workspace_id,
                 )
                 session_id = chat_session.id
@@ -169,6 +182,26 @@ class ChatService:
             trace_id=trace.id,
         )
 
+    def _generate_conversation_title(
+        self,
+        *,
+        user_message: str,
+        assistant_answer: str,
+        fallback: str,
+    ) -> str:
+        try:
+            raw_title = self._async_runner.run(
+                self.chat_client.chat(
+                    build_conversation_title_messages(
+                        user_message=user_message,
+                        assistant_answer=assistant_answer,
+                    )
+                )
+            )
+        except Exception:
+            return fallback
+        return _clean_generated_title(raw_title, fallback=fallback)
+
     def close(self) -> None:
         cleanup_error: Exception | None = None
         try:
@@ -200,3 +233,23 @@ class ChatService:
 
         if cleanup_error is not None:
             raise cleanup_error
+
+
+def _fallback_conversation_title(message: str) -> str:
+    return message.strip()[:80]
+
+
+def _clean_generated_title(raw_title: str, *, fallback: str) -> str:
+    lines = raw_title.strip().splitlines()
+    if not lines:
+        return fallback
+    title = lines[0].strip()
+    if title.lower().startswith("title:"):
+        title = title[6:].strip()
+    title = " ".join(title.strip(" \"'`").split())
+    title = title.rstrip(".!?").strip()
+    if not title:
+        return fallback
+    if len(title) > 60:
+        title = title[:60].rstrip()
+    return title

@@ -94,6 +94,31 @@ def build_chat_messages(
     return messages
 
 
+def build_conversation_title_messages(
+    *,
+    user_message: str,
+    assistant_answer: str,
+) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "Create a short title for this conversation.\n"
+                "Return only the title, 2-6 words, no quotes, no markdown, "
+                "and no trailing punctuation."
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"First user prompt:\n{user_message}\n\n"
+                f"Assistant answer:\n{assistant_answer}\n\n"
+                "Title:"
+            ),
+        },
+    ]
+
+
 def build_write_messages(
     *,
     message: str,

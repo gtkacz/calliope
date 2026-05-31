@@ -37,13 +37,45 @@ interface CharSource {
   offset: number;
 }
 
+function rangeTop(node: Text, start: number, end: number): number {
+  const range = document.createRange();
+  range.setStart(node, start);
+  range.setEnd(node, end);
+  return range.getBoundingClientRect().top;
+}
+
+// Break a [from, to) run on one text node into per-visual-line spans by watching
+// for jumps in each character's top offset. Reads only — no mutation — so the
+// browser measures layout once and serves every rect from cache. Per-line spans
+// let the sweep run one line at a time instead of all lines at once.
+function splitRangeByLine(
+  node: Text,
+  from: number,
+  to: number,
+): { start: number; end: number }[] {
+  const spans: { start: number; end: number }[] = [];
+  let segmentStart = from;
+  let previousTop = rangeTop(node, from, from + 1);
+  for (let i = from + 1; i < to; i += 1) {
+    const top = rangeTop(node, i, i + 1);
+    if (Math.abs(top - previousTop) > 1) {
+      spans.push({ start: segmentStart, end: i });
+      segmentStart = i;
+      previousTop = top;
+    }
+  }
+  spans.push({ start: segmentStart, end: to });
+  return spans;
+}
+
 // Highlight the passage inside the rendered document by wrapping the matching
 // run of each involved text node in a <mark>. Matching is done on a
 // whitespace-normalized projection of the DOM text with a per-character map back
 // to the originating text node, so highlights survive element boundaries.
-function highlightPassage(container: HTMLElement, passage: string): boolean {
+// Returns the created marks (in document order) so the caller can sweep them on.
+function highlightPassage(container: HTMLElement, passage: string): HTMLElement[] {
   const needle = passagePlainText(passage).toLowerCase();
-  if (needle.length === 0) return false;
+  if (needle.length === 0) return [];
 
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   let normalized = "";
@@ -69,7 +101,7 @@ function highlightPassage(container: HTMLElement, passage: string): boolean {
   }
 
   const start = normalized.toLowerCase().indexOf(needle);
-  if (start === -1) return false;
+  if (start === -1) return [];
   const end = start + needle.length;
 
   // Group matched normalized characters by their source node into contiguous
@@ -86,35 +118,109 @@ function highlightPassage(container: HTMLElement, passage: string): boolean {
     }
   }
 
+  // Expand each per-node run into per-visual-line spans, trimming whitespace off
+  // every line's edges so the sweep runs line-by-line and blank gaps / wrapped
+  // line-end spaces never get a highlight box of their own. All measuring happens
+  // here, before any DOM mutation, so layout is read in one cached pass.
+  const spans: { node: Text; start: number; end: number }[] = [];
   for (const range of ranges) {
-    let segment = range.node;
-    if (range.start > 0) segment = segment.splitText(range.start);
-    if (range.end - range.start < segment.data.length) {
-      segment.splitText(range.end - range.start);
+    const data = range.node.data;
+    for (const line of splitRangeByLine(range.node, range.start, range.end)) {
+      let from = line.start;
+      let to = line.end;
+      while (from < to && /\s/.test(data[from])) from += 1;
+      while (to > from && /\s/.test(data[to - 1])) to -= 1;
+      if (from < to) spans.push({ node: range.node, start: from, end: to });
     }
-    const mark = document.createElement("mark");
-    mark.className = "source-doc__hit";
-    segment.parentNode?.replaceChild(mark, segment);
-    mark.appendChild(segment);
   }
-  return true;
+
+  // Wrap each line span in its own <mark>. Cut each node's spans high-offset first
+  // so an earlier splitText never shifts an offset still to be cut; markByIndex
+  // preserves document (top-to-bottom) order for the staggered sweep.
+  const markByIndex: (HTMLElement | undefined)[] = new Array(spans.length);
+  const indicesByNode = new Map<Text, number[]>();
+  spans.forEach((span, index) => {
+    const list = indicesByNode.get(span.node);
+    if (list === undefined) indicesByNode.set(span.node, [index]);
+    else list.push(index);
+  });
+  for (const [node, indices] of indicesByNode) {
+    const descending = [...indices].sort((a, b) => spans[b].start - spans[a].start);
+    const head = node;
+    for (const index of descending) {
+      const span = spans[index];
+      let fragment = head;
+      if (span.start > 0) fragment = fragment.splitText(span.start);
+      if (span.end - span.start < fragment.data.length) {
+        fragment.splitText(span.end - span.start);
+      }
+      const mark = document.createElement("mark");
+      mark.className = "source-doc__hit";
+      fragment.parentNode?.replaceChild(mark, fragment);
+      mark.appendChild(fragment);
+      markByIndex[index] = mark;
+    }
+  }
+
+  const marks = markByIndex.filter(
+    (mark): mark is HTMLElement => mark !== undefined,
+  );
+  assignSweepTiming(marks);
+  return marks;
 }
+
+// Distribute the sweep across the marks (one per visual line) at a constant
+// character speed: each mark's duration is proportional to its length and its
+// delay to the characters before it, so the highlight is drawn line-by-line —
+// left-to-right on line 1, then line 2, and so on. Timing rides on CSS custom
+// properties consumed by the paint animation.
+function assignSweepTiming(marks: HTMLElement[]): void {
+  const lengths = marks.map((mark) => (mark.textContent ?? "").length);
+  const totalChars = lengths.reduce((sum, length) => sum + length, 0) || 1;
+  const totalMs = Math.min(1400, Math.max(380, totalChars * 9));
+  let elapsedChars = 0;
+  marks.forEach((mark, index) => {
+    const length = lengths[index];
+    const duration = Math.round((totalMs * length) / totalChars);
+    const delay = Math.round((totalMs * elapsedChars) / totalChars);
+    mark.style.setProperty("--paint-duration", `${duration}ms`);
+    mark.style.setProperty("--paint-delay", `${delay}ms`);
+    elapsedChars += length;
+  });
+}
+
+const PAINTING_CLASS = "source-doc__body--painting";
 
 watch(
   () => renderedContent.value,
   async () => {
     matched.value = null;
+    // Drop any prior sweep state so reopening replays the stroke from scratch.
+    bodyRef.value?.classList.remove(PAINTING_CLASS);
     await nextTick();
     const container = bodyRef.value;
     const passage = viewer.content?.passage;
     if (container === null || !passage) return;
-    matched.value = highlightPassage(container, passage);
-    if (matched.value) {
-      await nextTick();
-      container
-        .querySelector(".source-doc__hit")
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }
+
+    const marks = highlightPassage(container, passage);
+    matched.value = marks.length > 0;
+    if (marks.length === 0) return;
+
+    await nextTick();
+    marks[0].scrollIntoView({ block: "center", behavior: "smooth" });
+
+    // Draw the highlight only once scrolling settles, so the sweep reads as a
+    // deliberate stroke rather than racing the scroll. scrollend is the precise
+    // signal; the timeout covers browsers without it and the no-scroll case.
+    const scroller = container.closest(".source-doc__scroll");
+    let started = false;
+    const begin = () => {
+      if (started) return;
+      started = true;
+      container.classList.add(PAINTING_CLASS);
+    };
+    scroller?.addEventListener("scrollend", begin, { once: true });
+    window.setTimeout(begin, 520);
   },
 );
 
@@ -310,15 +416,55 @@ function close() {
   line-height: 1.75;
 }
 
-/* The cited passage — a warm gilt highlight evoking a manuscript rubrication. */
+/* The cited passage — a gilt marker stroke. It renders un-painted (zero-width
+   background) and is swept on left-to-right once the scroll settles (see the
+   PAINTING_CLASS toggle), so it reads like a highlighter being drawn. The
+   two-tone band sits low like real ink pressed harder at the base. */
 .source-doc__body :deep(.source-doc__hit) {
-  background: var(--calliope-bronze-veil);
   color: var(--calliope-paper);
-  box-shadow:
-    inset 0 -0.55em 0 var(--calliope-bronze-veil),
-    0 0 0 1px var(--calliope-bronze-glow);
+  /* <mark> ships a solid-yellow UA background; clear it so only the gilt gradient
+     shows and the un-swept state is genuinely transparent (not opaque yellow). */
+  background-color: transparent;
   border-radius: var(--calliope-radius-xs);
-  padding: 0.04em 0.06em;
+  /* Vertical padding only — horizontal padding would shift line wrapping and
+     invalidate the per-line measurement the sweep depends on. */
+  padding: 0.08em 0;
+  background-image: linear-gradient(
+    180deg,
+    transparent 8%,
+    var(--calliope-bronze-veil) 8%,
+    var(--calliope-bronze-veil) 52%,
+    var(--calliope-bronze-glow) 52%,
+    var(--calliope-bronze-glow) 90%,
+    transparent 90%
+  );
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 0% 100%;
+}
+
+.source-doc__body--painting :deep(.source-doc__hit) {
+  animation: source-doc-paint var(--paint-duration, 480ms)
+    var(--calliope-ease-out) var(--paint-delay, 0ms) both;
+}
+
+@keyframes source-doc-paint {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+
+/* Honour reduced-motion: show the highlight fully drawn, no sweep. */
+@media (prefers-reduced-motion: reduce) {
+  .source-doc__body :deep(.source-doc__hit) {
+    background-size: 100% 100%;
+  }
+  .source-doc__body--painting :deep(.source-doc__hit) {
+    animation: none;
+  }
 }
 
 /* Compact editorial typography for the rendered document body. Kept local to the

@@ -169,23 +169,37 @@ function highlightPassage(container: HTMLElement, passage: string): HTMLElement[
   return marks;
 }
 
-// Distribute the sweep across the marks (one per visual line) at a constant
-// character speed: each mark's duration is proportional to its length and its
-// delay to the characters before it, so the highlight is drawn line-by-line —
-// left-to-right on line 1, then line 2, and so on. Timing rides on CSS custom
-// properties consumed by the paint animation.
+// Inverse of an easeInOutQuart curve: given a fraction of the passage's content,
+// return the fraction of real time at which a slow-fast-slow stroke reaches it.
+// The macro easing has to live here — in how each line's start/duration is spaced
+// across the timeline — because the per-line fill itself is linear. Distributing
+// delays along this inverse is what makes the whole sweep ease in, rush the
+// middle, and settle at the end (a per-line timing-function only eases each tiny
+// segment, which reads as constant speed overall).
+function inverseEaseTime(contentFraction: number): number {
+  const c = Math.min(1, Math.max(0, contentFraction));
+  return c < 0.5
+    ? Math.pow(c / 8, 1 / 4)
+    : 1 - Math.pow(2 * (1 - c), 1 / 4) / 2;
+}
+
+// Lay the marks (one per visual line) out along the eased timeline: each line is
+// painted left-to-right, in order, but the cadence down the passage follows the
+// slow-fast-slow curve. Timing rides on CSS custom properties read by the paint
+// animation, whose own timing-function stays linear.
 function assignSweepTiming(marks: HTMLElement[]): void {
   const lengths = marks.map((mark) => (mark.textContent ?? "").length);
   const totalChars = lengths.reduce((sum, length) => sum + length, 0) || 1;
-  const totalMs = Math.min(1400, Math.max(380, totalChars * 9));
+  const totalMs = Math.min(1500, Math.max(420, totalChars * 9));
   let elapsedChars = 0;
   marks.forEach((mark, index) => {
-    const length = lengths[index];
-    const duration = Math.round((totalMs * length) / totalChars);
-    const delay = Math.round((totalMs * elapsedChars) / totalChars);
+    const startTime = inverseEaseTime(elapsedChars / totalChars);
+    const endTime = inverseEaseTime((elapsedChars + lengths[index]) / totalChars);
+    const delay = Math.round(totalMs * startTime);
+    const duration = Math.max(1, Math.round(totalMs * (endTime - startTime)));
     mark.style.setProperty("--paint-duration", `${duration}ms`);
     mark.style.setProperty("--paint-delay", `${delay}ms`);
-    elapsedChars += length;
+    elapsedChars += lengths[index];
   });
 }
 
@@ -421,6 +435,11 @@ function close() {
    PAINTING_CLASS toggle), so it reads like a highlighter being drawn. The
    two-tone band sits low like real ink pressed harder at the base. */
 .source-doc__body :deep(.source-doc__hit) {
+  /* Translucent gilt ink, derived from the bronze token so it stays on-palette —
+     the dark page reads through it like a real highlighter rather than a solid
+     fill. Two-tone: lighter at the top, a touch denser at the base. */
+  --source-hit-soft: color-mix(in srgb, var(--calliope-bronze) 16%, transparent);
+  --source-hit-strong: color-mix(in srgb, var(--calliope-bronze) 30%, transparent);
   color: var(--calliope-paper);
   /* <mark> ships a solid-yellow UA background; clear it so only the gilt gradient
      shows and the un-swept state is genuinely transparent (not opaque yellow). */
@@ -432,10 +451,10 @@ function close() {
   background-image: linear-gradient(
     180deg,
     transparent 8%,
-    var(--calliope-bronze-veil) 8%,
-    var(--calliope-bronze-veil) 52%,
-    var(--calliope-bronze-glow) 52%,
-    var(--calliope-bronze-glow) 90%,
+    var(--source-hit-soft) 8%,
+    var(--source-hit-soft) 52%,
+    var(--source-hit-strong) 52%,
+    var(--source-hit-strong) 90%,
     transparent 90%
   );
   background-repeat: no-repeat;
@@ -443,9 +462,11 @@ function close() {
   background-size: 0% 100%;
 }
 
+/* Per-line fill is linear; the slow-fast-slow character of the whole sweep comes
+   from the eased delay/duration spacing assigned in assignSweepTiming(). */
 .source-doc__body--painting :deep(.source-doc__hit) {
-  animation: source-doc-paint var(--paint-duration, 480ms)
-    var(--calliope-ease-out) var(--paint-delay, 0ms) both;
+  animation: source-doc-paint var(--paint-duration, 480ms) linear
+    var(--paint-delay, 0ms) both;
 }
 
 @keyframes source-doc-paint {

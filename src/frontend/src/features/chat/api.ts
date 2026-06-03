@@ -79,6 +79,7 @@ export function sendChat(payload: {
   chat_profile_id: string;
   limit: number;
   cited_document_ids: string[];
+  apply_guidelines: boolean;
 }): Promise<ChatResponse> {
   return requestJson("/v1/chat", {
     method: "POST",
@@ -108,6 +109,7 @@ export function sendWrite(payload: {
   chat_profile_id: string;
   limit: number;
   cited_document_ids: string[];
+  apply_guidelines: boolean;
 }): Promise<WriteResponse> {
   return requestJson("/v1/write", {
     method: "POST",

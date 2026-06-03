@@ -25,6 +25,9 @@ class Workspace(Base):
     # Nullable tri-state: NULL inherits the global CALLIOPE_VERSIONING_ENABLED flag;
     # True/False is an explicit per-workspace override.
     versioning_enabled: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # Free-text standing directive injected into the chat/write/editor system
+    # prompts; NULL or empty means the workspace has no standing guidelines.
+    guidelines: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

@@ -10,6 +10,7 @@ interface ProposeEditParams {
   instruction: string;
   mode: EditMode;
   chat_profile_id: string;
+  apply_guidelines: boolean;
 }
 
 export function readFile(path: string): Promise<FileContent> {

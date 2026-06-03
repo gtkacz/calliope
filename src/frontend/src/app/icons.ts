@@ -27,6 +27,7 @@ import {
   mdiFeather,
   mdiRestore,
   mdiScaleBalance,
+  mdiScriptTextOutline,
   mdiShieldCheckOutline,
   mdiTextSearchVariant,
 } from '@mdi/js'
@@ -66,6 +67,7 @@ export const appIconAliases: Record<string, string> = {
   'mdi-feather': mdiFeather,
   'mdi-restore': mdiRestore,
   'mdi-scale-balance': mdiScaleBalance,
+  'mdi-script-text-outline': mdiScriptTextOutline,
   'mdi-shield-check-outline': mdiShieldCheckOutline,
   'mdi-text-search-variant': mdiTextSearchVariant,
 }

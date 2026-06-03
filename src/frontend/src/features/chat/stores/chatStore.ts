@@ -27,6 +27,9 @@ interface ChatState {
   mentionWorkspaceId: string | null;
   citedDocumentIds: string[];
   canvas: string;
+  applyGuidelinesChat: boolean;
+  applyGuidelinesWrite: boolean;
+  applyGuidelinesEditor: boolean;
 }
 
 export const useChatStore = defineStore("chat", {
@@ -46,6 +49,9 @@ export const useChatStore = defineStore("chat", {
     mentionWorkspaceId: null,
     citedDocumentIds: [],
     canvas: "",
+    applyGuidelinesChat: true,
+    applyGuidelinesWrite: true,
+    applyGuidelinesEditor: true,
   }),
   getters: {
     canSubmit(state): boolean {
@@ -129,6 +135,7 @@ export const useChatStore = defineStore("chat", {
             chat_profile_id: this.selectedChatProfileId as string,
             limit: 8,
             cited_document_ids: reconciledIds,
+            apply_guidelines: this.applyGuidelinesChat,
           });
           this.citedDocumentIds = [];
           this.activeSessionId = response.session.id;
@@ -152,6 +159,7 @@ export const useChatStore = defineStore("chat", {
             chat_profile_id: this.selectedChatProfileId as string,
             limit: 8,
             cited_document_ids: reconciledIds,
+            apply_guidelines: this.applyGuidelinesWrite,
           });
           this.citedDocumentIds = [];
           this.canvas = response.canvas;

@@ -4,6 +4,7 @@ export interface Workspace {
   root_path: string
   include_globs: string[]
   exclude_globs: string[]
+  guidelines: string | null
   created_at: string
 }
 

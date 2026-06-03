@@ -33,6 +33,7 @@ class EditorService:
         *,
         policy: CanonPolicy = CanonPolicy.CANON_PLUS_INFERENCE,
         sources: list[SourceReference] | None = None,
+        guidelines: str | None = None,
     ) -> EditProposal:
         current = self.filesystem.read_file(request.path)
         messages = build_document_edit_messages(
@@ -41,6 +42,7 @@ class EditorService:
             mode=request.mode,
             policy=policy,
             sources=sources,
+            guidelines=guidelines,
         )
         completion = self._async_runner.run(self.chat_client.chat(messages))
         generated = completion.content

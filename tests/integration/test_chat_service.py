@@ -38,6 +38,15 @@ class RecordingTitleChatClient:
         return ChatCompletion(content='"Kaelen Exile"')
 
 
+class RecordingChatClient:
+    def __init__(self) -> None:
+        self.calls: list[list[dict[str, str]]] = []
+
+    async def chat(self, messages: list[dict[str, str]]) -> ChatCompletion:
+        self.calls.append(messages)
+        return ChatCompletion(content="Kaelen was exiled from Velmora. [characters/kaelen.md]")
+
+
 def test_chat_service_returns_grounded_answer_and_trace(db_session: Session) -> None:
     workspace = WorkspaceRepository(db_session).create(
         WorkspaceCreate(
@@ -393,3 +402,85 @@ def test_chat_service_search_cleanup_does_not_mask_search_error(
             raise
 
     assert client.close_loops == [client.loops[0]]
+
+
+def test_chat_service_injects_workspace_guidelines(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(HybridRetriever, "_vector_search", lambda *a, **k: ["chunk_a"])
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", lambda *a, **k: ["chunk_a"])
+    monkeypatch.setattr(
+        ChunkRepository,
+        "source_for_chunk",
+        lambda self, chunk_id, score=1.0: SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            context="Kaelen exile",
+            score=score,
+        ),
+    )
+
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="guided-world",
+            root_path="/tmp/guided-world",
+            guidelines="This is a dark fantasy world.",
+        )
+    )
+    client = RecordingChatClient()
+    service = ChatService(db_session, embedding_client=FakeEmbeddingClient(), chat_client=client)
+    try:
+        service.chat(
+            ChatRequest(message="Where was Kaelen exiled from?", workspace_id=workspace.id, limit=1)
+        )
+    finally:
+        service.close()
+
+    assert "WORKSPACE GUIDELINES" in client.calls[0][0]["content"]
+    assert "dark fantasy world" in client.calls[0][0]["content"]
+
+
+def test_chat_service_omits_guidelines_when_toggle_off(
+    db_session: Session,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(HybridRetriever, "_vector_search", lambda *a, **k: ["chunk_a"])
+    monkeypatch.setattr(HybridRetriever, "_lexical_search", lambda *a, **k: ["chunk_a"])
+    monkeypatch.setattr(
+        ChunkRepository,
+        "source_for_chunk",
+        lambda self, chunk_id, score=1.0: SourceReference(
+            document_id="document_a",
+            chunk_id=chunk_id,
+            path="characters/kaelen.md",
+            heading="Kaelen",
+            context="Kaelen exile",
+            score=score,
+        ),
+    )
+
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(
+            name="guided-world-off",
+            root_path="/tmp/guided-world-off",
+            guidelines="This is a dark fantasy world.",
+        )
+    )
+    client = RecordingChatClient()
+    service = ChatService(db_session, embedding_client=FakeEmbeddingClient(), chat_client=client)
+    try:
+        service.chat(
+            ChatRequest(
+                message="Where was Kaelen exiled from?",
+                workspace_id=workspace.id,
+                apply_guidelines=False,
+                limit=1,
+            )
+        )
+    finally:
+        service.close()
+
+    assert "WORKSPACE GUIDELINES" not in client.calls[0][0]["content"]

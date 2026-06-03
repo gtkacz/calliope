@@ -30,6 +30,34 @@ const emit = defineEmits<{
 
 const chat = useChatStore();
 
+const selectedWorkspaceGuidelines = computed<string | null>(() => {
+  const ws = props.workspaces.find((w) => w.id === props.selectedWorkspaceId);
+  return ws?.guidelines ?? null;
+});
+
+// Only meaningful when the workspace actually has guidelines and the mode
+// generates text — search performs retrieval only, with no system prompt.
+const guidelinesAvailable = computed<boolean>(
+  () =>
+    props.mode !== "search" &&
+    (selectedWorkspaceGuidelines.value?.trim().length ?? 0) > 0,
+);
+
+// Chat and write keep independent toggles; proxy to the active surface's flag.
+const applyGuidelines = computed<boolean>({
+  get: () =>
+    props.mode === "write"
+      ? chat.applyGuidelinesWrite
+      : chat.applyGuidelinesChat,
+  set: (value) => {
+    if (props.mode === "write") {
+      chat.applyGuidelinesWrite = value;
+    } else {
+      chat.applyGuidelinesChat = value;
+    }
+  },
+});
+
 const text = ref("");
 const focused = ref(false);
 const mentionMenuRef = ref<InstanceType<typeof MentionMenu> | null>(null);
@@ -332,6 +360,33 @@ defineExpose({ prefill });
               </template>
             </v-tooltip>
           </div>
+          <v-tooltip
+            v-if="guidelinesAvailable"
+            :text="
+              applyGuidelines
+                ? 'Workspace guidelines: applied'
+                : 'Workspace guidelines: ignored'
+            "
+            location="top"
+            :open-delay="120"
+            max-width="252"
+          >
+            <template #activator="{ props: tipProps }">
+              <button
+                v-bind="tipProps"
+                type="button"
+                class="composer__guidelines-toggle"
+                :class="{ 'is-active': applyGuidelines }"
+                role="switch"
+                :aria-checked="applyGuidelines"
+                aria-label="Apply workspace guidelines"
+                data-test="guidelines-toggle"
+                @click="applyGuidelines = !applyGuidelines"
+              >
+                <v-icon icon="$mdi-script-text-outline" size="17" />
+              </button>
+            </template>
+          </v-tooltip>
           <v-select
             :model-value="selectedWorkspaceId"
             :items="workspaces"
@@ -545,6 +600,40 @@ defineExpose({ prefill });
 }
 
 .composer__policy-seg.is-active {
+  background: var(--calliope-bronze);
+  color: var(--calliope-ink);
+  box-shadow: 0 0 9px 1px var(--calliope-bronze-glow);
+}
+
+.composer__guidelines-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  background: var(--calliope-ink);
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-pill);
+  color: var(--calliope-paper-dim);
+  cursor: pointer;
+  flex: none;
+  transition:
+    background-color var(--calliope-duration-fast) var(--calliope-ease-out),
+    color var(--calliope-duration-fast) var(--calliope-ease-out),
+    box-shadow var(--calliope-duration-fast) var(--calliope-ease-out);
+}
+
+.composer__guidelines-toggle:hover {
+  color: var(--calliope-paper);
+}
+
+.composer__guidelines-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--calliope-bronze-veil);
+}
+
+.composer__guidelines-toggle.is-active {
   background: var(--calliope-bronze);
   color: var(--calliope-ink);
   box-shadow: 0 0 9px 1px var(--calliope-bronze-glow);

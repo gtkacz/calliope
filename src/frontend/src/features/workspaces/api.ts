@@ -7,6 +7,7 @@ export interface WorkspacePayload {
   root_path: string
   include_globs: string[]
   exclude_globs: string[]
+  guidelines: string | null
 }
 
 export function listWorkspaces(): Promise<Workspace[]> {

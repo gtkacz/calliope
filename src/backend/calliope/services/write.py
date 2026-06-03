@@ -15,6 +15,7 @@ from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.retrieval.hybrid import EmbeddingClient, RerankClient, _AsyncRunner, aclose_client
+from calliope.services.guidelines import resolve_workspace_guidelines
 from calliope.services.search import SearchService
 from sqlalchemy.orm import Session
 
@@ -114,6 +115,11 @@ class WriteService:
                 )
             )
 
+        guidelines = resolve_workspace_guidelines(
+            self.session,
+            workspace_id=request.workspace_id,
+            apply_guidelines=request.apply_guidelines,
+        )
         messages = build_write_messages(
             message=request.message,
             policy=request.policy,
@@ -121,6 +127,7 @@ class WriteService:
             sources=search_response.sources,
             cited_documents=cited_documents or None,
             history=history,
+            guidelines=guidelines,
         )
         completion = self._async_runner.run(self.chat_client.chat(messages))
         new_canvas = completion.content

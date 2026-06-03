@@ -12,7 +12,7 @@ from calliope.db.models import (
     Workspace,
 )
 from calliope.domain.errors import AppError
-from calliope.domain.schemas import WorkspaceCreate
+from calliope.domain.schemas import WorkspaceCreate, WorkspacePatch
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.repositories.workspaces import WorkspaceRepository
@@ -46,7 +46,7 @@ def test_database_tables_are_created(db_engine) -> None:
 def test_database_schema_is_applied_by_migrations(db_session) -> None:
     version = db_session.execute(text("select version_num from alembic_version"))
 
-    assert version.scalar_one() == "0007_profile_max_tokens"
+    assert version.scalar_one() == "0008_workspace_guidelines"
 
 
 def test_vector_l2_distance_orders_nearest_chunk_first(db_session) -> None:
@@ -304,3 +304,30 @@ def test_document_repository_public_reads_hide_deleted_documents(db_session) -> 
     assert revived.id == document.id
     assert revived.deleted_at is None
     assert [listed.id for listed in repo.list()] == [document.id]
+
+
+def test_workspace_guidelines_round_trip(db_session) -> None:
+    repo = WorkspaceRepository(db_session)
+    created = repo.create(
+        WorkspaceCreate(
+            name="guided",
+            root_path="/tmp/guided",
+            guidelines="This is a dark fantasy world.",
+        )
+    )
+    assert created.guidelines == "This is a dark fantasy world."
+
+    updated = repo.update(created.id, WorkspacePatch(guidelines="Now high fantasy."))
+    assert updated.guidelines == "Now high fantasy."
+
+    # An omitted (None) guidelines field leaves the stored value unchanged.
+    unchanged = repo.update(created.id, WorkspacePatch(name="renamed"))
+    assert unchanged.guidelines == "Now high fantasy."
+
+    # An empty string clears the standing guidelines back to None.
+    cleared = repo.update(created.id, WorkspacePatch(guidelines=""))
+    assert cleared.guidelines is None
+
+    # Empty guidelines on create are normalised to None as well.
+    blank = repo.create(WorkspaceCreate(name="blank", root_path="/tmp/blank", guidelines=""))
+    assert blank.guidelines is None

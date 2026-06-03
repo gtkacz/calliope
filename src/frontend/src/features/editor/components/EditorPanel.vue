@@ -35,6 +35,10 @@ const workspaceRoot = computed<string>(
   () => workspace.selectedWorkspace?.root_path ?? "/",
 );
 
+const guidelinesAvailable = computed<boolean>(
+  () => (workspace.selectedWorkspace?.guidelines?.trim().length ?? 0) > 0,
+);
+
 const canPropose = computed<boolean>(
   () =>
     loadedFile.value !== null &&
@@ -77,6 +81,7 @@ async function propose(): Promise<void> {
       instruction: instruction.value.trim(),
       mode: mode.value,
       chat_profile_id: chat.selectedChatProfileId,
+      apply_guidelines: chat.applyGuidelinesEditor,
     });
   } catch (error: unknown) {
     errorMessage.value =
@@ -211,6 +216,17 @@ const modeOptions: { value: EditMode; label: string }[] = [
             placeholder="Describe what to change…"
             class="editor-panel__instruction"
           />
+        </div>
+
+        <div v-if="guidelinesAvailable" class="editor-panel__section">
+          <label class="editor-panel__guidelines">
+            <input
+              v-model="chat.applyGuidelinesEditor"
+              type="checkbox"
+              class="editor-panel__guidelines-box"
+            />
+            <span class="calliope-eyebrow">Apply workspace guidelines</span>
+          </label>
         </div>
 
         <div v-if="!chat.selectedChatProfileId" class="editor-panel__section">
@@ -408,6 +424,18 @@ const modeOptions: { value: EditMode; label: string }[] = [
 .editor-panel__label {
   margin-bottom: 0.45rem;
   color: var(--calliope-paper-dim);
+}
+
+.editor-panel__guidelines {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--calliope-space-xs);
+  cursor: pointer;
+}
+
+.editor-panel__guidelines-box {
+  accent-color: var(--calliope-bronze);
+  cursor: pointer;
 }
 
 .editor-panel__file-row {

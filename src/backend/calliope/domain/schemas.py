@@ -177,6 +177,7 @@ class EditProposal(BaseModel):
     mode: EditMode
     original_content: str
     proposed_content: str
+    truncated: bool = False
 
 
 class DocumentRead(BaseModel):

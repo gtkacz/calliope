@@ -285,6 +285,19 @@ const modeOptions: { value: EditMode; label: string }[] = [
           </div>
         </div>
 
+        <div v-if="proposal.truncated" class="editor-panel__section">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            border="start"
+          >
+            This proposal hit the model's length limit and may be cut off. Raise
+            <strong>Max tokens</strong> for this profile in Settings to generate the
+            full document.
+          </v-alert>
+        </div>
+
         <div v-if="errorMessage" class="editor-panel__section">
           <v-alert
             type="error"

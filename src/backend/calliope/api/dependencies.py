@@ -4,7 +4,7 @@ from typing import Annotated
 
 from calliope.config import Settings
 from calliope.db.session import create_session_factory
-from calliope.domain.enums import CanonPolicy, ProfileCapability
+from calliope.domain.enums import CanonPolicy, ProfileCapability, ProfileKind
 from calliope.domain.schemas import ProfileRead
 from calliope.llm.openai_compatible import OpenAICompatibleClient
 from calliope.llm.sampling import resolve_sampling_params
@@ -58,12 +58,17 @@ def get_chat_client(
         if profile.max_tokens is not None
         else settings.default_max_tokens,
     )
+    is_ollama = profile.kind == ProfileKind.OLLAMA
+    is_koboldcpp = profile.kind == ProfileKind.KOBOLDCPP
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
         timeout_seconds=settings.llm_request_timeout_seconds,
         sampling_params=params,
+        use_ollama_native=is_ollama,
+        num_ctx=settings.default_num_ctx if is_ollama else None,
+        use_koboldcpp=is_koboldcpp,
     )
 
 
@@ -87,10 +92,15 @@ def get_chat_client_for_profile(
         if profile.max_tokens is not None
         else settings.default_max_tokens,
     )
+    is_ollama = profile.kind == ProfileKind.OLLAMA
+    is_koboldcpp = profile.kind == ProfileKind.KOBOLDCPP
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile),
         timeout_seconds=settings.llm_request_timeout_seconds,
         sampling_params=params,
+        use_ollama_native=is_ollama,
+        num_ctx=settings.default_num_ctx if is_ollama else None,
+        use_koboldcpp=is_koboldcpp,
     )

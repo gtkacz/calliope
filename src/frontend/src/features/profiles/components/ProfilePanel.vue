@@ -3,7 +3,7 @@ import { onMounted, reactive, ref } from "vue";
 
 import { useProfileStore } from "../stores/profileStore";
 import { providerPresets, type ProviderPreset } from "../providerPresets";
-import type { Profile, ProfileCapability } from "../types";
+import type { Profile, ProfileCapability, ProfileKind } from "../types";
 
 const store = useProfileStore();
 const editingId = ref<string | null>(null);
@@ -11,7 +11,7 @@ const selectedPresetId = ref<string | null>(null);
 
 const form = reactive({
   name: "",
-  kind: "openai_compatible" as const,
+  kind: "openai_compatible" as ProfileKind,
   base_url: "",
   model: "",
   api_key_ref: "",
@@ -37,6 +37,7 @@ function applyPreset(presetId: string | null) {
     return;
   }
 
+  form.kind = preset.kind;
   form.base_url = preset.base_url;
   form.model = preset.model;
   form.capabilities = [...preset.capabilities];
@@ -53,6 +54,15 @@ const capabilityChoices: ProfileCapability[] = [
   "embeddings",
   "rerank",
   "streaming",
+];
+
+// "Ollama (native API)" routes chat through /api/chat so the context window and
+// sampling controls actually apply; Ollama's OpenAI-compatible /v1 endpoint
+// silently drops them, which is what makes its output short and off-format.
+const kindOptions: { value: ProfileKind; label: string }[] = [
+  { value: "openai_compatible", label: "OpenAI-compatible" },
+  { value: "ollama", label: "Ollama (native API)" },
+  { value: "koboldcpp", label: "KoboldCpp" },
 ];
 
 onMounted(() => store.refresh());
@@ -181,6 +191,17 @@ async function save() {
         <v-text-field
           v-model="form.base_url"
           placeholder="https://api.example.com/v1"
+        />
+      </div>
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Connection kind</label>
+        <v-select
+          v-model="form.kind"
+          :items="kindOptions"
+          item-title="label"
+          item-value="value"
+          hint="Use Ollama (native API) for Ollama servers, or KoboldCpp for KoboldCpp servers, so sampling settings take effect."
+          persistent-hint
         />
       </div>
       <div class="panel-field">

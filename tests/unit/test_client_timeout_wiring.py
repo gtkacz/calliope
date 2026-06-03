@@ -50,6 +50,9 @@ class RecordingClient:
         api_key: str | None = None,
         timeout_seconds: float = 30,
         sampling_params: object = None,
+        use_ollama_native: bool = False,
+        num_ctx: int | None = None,
+        use_koboldcpp: bool = False,
     ) -> None:
         self.constructed.append(
             {
@@ -57,6 +60,9 @@ class RecordingClient:
                 "model": model,
                 "api_key": api_key,
                 "timeout_seconds": timeout_seconds,
+                "use_ollama_native": use_ollama_native,
+                "num_ctx": num_ctx,
+                "use_koboldcpp": use_koboldcpp,
             }
         )
 

@@ -1,4 +1,4 @@
-export type ProfileKind = 'openai_compatible'
+export type ProfileKind = 'openai_compatible' | 'ollama' | 'koboldcpp'
 export type ProfileCapability = 'chat' | 'embeddings' | 'rerank' | 'streaming'
 
 export interface Profile {

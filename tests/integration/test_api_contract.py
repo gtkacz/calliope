@@ -33,6 +33,9 @@ class FakeOpenAICompatibleClient:
         api_key: str | None = None,
         timeout_seconds: float = 120,
         sampling_params: object = None,
+        use_ollama_native: bool = False,
+        num_ctx: int | None = None,
+        use_koboldcpp: bool = False,
     ) -> None:
         self.base_url = base_url
         self.model = model

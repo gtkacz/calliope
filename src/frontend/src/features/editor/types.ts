@@ -10,4 +10,5 @@ export interface EditProposal {
   mode: EditMode;
   original_content: string;
   proposed_content: string;
+  truncated: boolean;
 }

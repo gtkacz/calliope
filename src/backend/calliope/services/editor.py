@@ -42,7 +42,8 @@ class EditorService:
             policy=policy,
             sources=sources,
         )
-        generated = self._async_runner.run(self.chat_client.chat(messages)).content
+        completion = self._async_runner.run(self.chat_client.chat(messages))
+        generated = completion.content
 
         if request.mode is EditMode.APPEND:
             proposed_content = current.content.rstrip("\n") + "\n\n" + generated.strip() + "\n"
@@ -54,6 +55,7 @@ class EditorService:
             mode=request.mode,
             original_content=current.content,
             proposed_content=proposed_content,
+            truncated=completion.truncated,
         )
 
     def close(self) -> None:

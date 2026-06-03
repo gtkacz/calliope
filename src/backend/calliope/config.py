@@ -17,6 +17,18 @@ DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
 # window of every local model Calliope targets; operators raise it per deployment.
 DEFAULT_MAX_TOKENS = 4096
 
+# Context window (in tokens) sent as options.num_ctx on Ollama-native profiles.
+# Ollama defaults num_ctx to a small value (2048 on older builds, 4096 on current)
+# and SILENTLY left-truncates any prompt that exceeds it, discarding the system
+# prompt — and its format contract — before generation begins. A RAG "write a
+# chapter from these lore documents" prompt overruns that easily, which is why
+# such output comes back short, hallucinated, and off-format. An explicit, large
+# window is therefore required for grounded long-form generation. 32768 holds the
+# lore + canvas + history budget on modern local models; operators lower it for
+# memory-constrained hosts. Only sent for ProfileKind.OLLAMA — the OpenAI /v1
+# endpoint has no way to set it.
+DEFAULT_NUM_CTX = 32768
+
 # RRF scores top out ~0.033 for rank-1; 0.005 eliminates only true noise
 # (rank >> 100 from both sources) while keeping at least one result unless
 # the entire candidate set is empty.
@@ -42,6 +54,7 @@ class Settings(BaseSettings):
         gt=0,
     )
     default_max_tokens: int = Field(default=DEFAULT_MAX_TOKENS, gt=0)
+    default_num_ctx: int = Field(default=DEFAULT_NUM_CTX, gt=0)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )

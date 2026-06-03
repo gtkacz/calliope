@@ -67,6 +67,9 @@ class OpenAICompatibleClient:
         http_client: httpx.AsyncClient | None = None,
         timeout_seconds: float = DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS,
         sampling_params: SamplingParams | None = None,
+        use_ollama_native: bool = False,
+        num_ctx: int | None = None,
+        use_koboldcpp: bool = False,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -75,6 +78,9 @@ class OpenAICompatibleClient:
         self.http_client = http_client or httpx.AsyncClient(timeout=timeout_seconds)
         self._closed = False
         self.sampling_params = sampling_params
+        self.use_ollama_native = use_ollama_native
+        self.num_ctx = num_ctx
+        self.use_koboldcpp = use_koboldcpp
 
     async def aclose(self) -> None:
         if self._closed:
@@ -97,6 +103,8 @@ class OpenAICompatibleClient:
         return data["data"][0]["embedding"]
 
     async def chat(self, messages: list[dict[str, Any]]) -> ChatCompletion:
+        if self.use_ollama_native:
+            return await self._chat_ollama_native(messages)
         payload: dict[str, Any] = {"model": self.model, "messages": messages}
         if self.sampling_params is not None:
             p = self.sampling_params
@@ -111,6 +119,11 @@ class OpenAICompatibleClient:
                 payload["frequency_penalty"] = p.frequency_penalty
             if p.max_tokens is not None:
                 payload["max_tokens"] = p.max_tokens
+        if self.use_koboldcpp and "repetition_penalty" in payload:
+            # KoboldCpp's /v1 endpoint honors only its native rep_pen field and
+            # silently ignores OpenAI's repetition_penalty, which would otherwise
+            # leave repetition unconstrained.
+            payload["rep_pen"] = payload.pop("repetition_penalty")
         response = await self._post(
             f"{self.base_url}/chat/completions",
             code="generation_failed",
@@ -131,6 +144,70 @@ class OpenAICompatibleClient:
                 self.model,
             )
         return ChatCompletion(content=choice["message"]["content"], truncated=truncated)
+
+    def _ollama_base(self) -> str:
+        """Return the Ollama server root, stripping a trailing ``/v1``.
+
+        Ollama profiles store the ``/v1`` base_url so the shared embeddings path
+        (`/v1/embeddings`) keeps working; the native chat endpoint lives at the
+        server root (`/api/chat`), so the OpenAI-compat suffix is removed here."""
+        suffix = "/v1"
+        if self.base_url.endswith(suffix):
+            return self.base_url[: -len(suffix)]
+        return self.base_url
+
+    async def _chat_ollama_native(self, messages: list[dict[str, Any]]) -> ChatCompletion:
+        """Generate via Ollama's native ``/api/chat`` instead of ``/v1``.
+
+        Ollama's OpenAI-compatible endpoint silently discards num_ctx, min_p, and
+        repeat_penalty, so the prompt is left-truncated against a tiny default
+        window and sampling runs unconstrained — the cause of short, hallucinated,
+        off-format output. The native endpoint accepts these under an `options`
+        object, where Ollama's own parameter names apply (max_tokens is
+        num_predict; repetition_penalty is repeat_penalty)."""
+        options: dict[str, Any] = {}
+        if self.num_ctx is not None:
+            options["num_ctx"] = self.num_ctx
+        if self.sampling_params is not None:
+            p = self.sampling_params
+            options["temperature"] = p.temperature
+            if p.min_p is not None:
+                options["min_p"] = p.min_p
+            if p.repetition_penalty is not None:
+                options["repeat_penalty"] = p.repetition_penalty
+            if p.top_p is not None:
+                options["top_p"] = p.top_p
+            if p.frequency_penalty is not None:
+                options["frequency_penalty"] = p.frequency_penalty
+            if p.max_tokens is not None:
+                options["num_predict"] = p.max_tokens
+        payload: dict[str, Any] = {
+            "model": self.model,
+            "messages": messages,
+            "stream": False,
+        }
+        if options:
+            payload["options"] = options
+        response = await self._post(
+            f"{self._ollama_base()}/api/chat",
+            code="generation_failed",
+            headers=self._headers(),
+            json=payload,
+        )
+        self._raise_for_status(response, code="generation_failed")
+
+        data = response.json()
+        message = data.get("message") or {}
+        truncated = data.get("done_reason") == _FINISH_REASON_LENGTH
+        if truncated:
+            logger.warning(
+                "generation hit the token ceiling (done_reason=length, num_predict=%s, "
+                "model=%s); the response is truncated. Raise CALLIOPE_DEFAULT_MAX_TOKENS "
+                "or the profile's max_tokens if documents are being cut off.",
+                options.get("num_predict"),
+                self.model,
+            )
+        return ChatCompletion(content=message.get("content", ""), truncated=truncated)
 
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.api_key}"}

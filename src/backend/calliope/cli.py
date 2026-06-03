@@ -54,11 +54,16 @@ def profile_client(
     settings: Settings,
 ) -> OpenAICompatibleClient:
     profile = ProfileService(session).require_default_capability(capability)
+    is_ollama = profile.kind == ProfileKind.OLLAMA
+    is_koboldcpp = profile.kind == ProfileKind.KOBOLDCPP
     return OpenAICompatibleClient(
         base_url=profile.base_url,
         model=profile.model,
         api_key=api_key_for(profile.api_key_ref),
         timeout_seconds=settings.llm_request_timeout_seconds,
+        use_ollama_native=is_ollama,
+        num_ctx=settings.default_num_ctx if is_ollama else None,
+        use_koboldcpp=is_koboldcpp,
     )
 
 

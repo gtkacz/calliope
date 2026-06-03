@@ -19,6 +19,7 @@ from calliope.repositories.workspaces import WorkspaceRepository
 from calliope.retrieval.hybrid import _AsyncRunner
 from calliope.services.editor import EditorService
 from calliope.services.filesystem import FilesystemService
+from calliope.services.guidelines import resolve_guidelines_for_path
 from calliope.services.search import SearchService
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -44,6 +45,11 @@ def propose_edit(
     )
 
     sources = _resolve_editor_sources(request, session, settings)
+    guidelines = resolve_guidelines_for_path(
+        session,
+        path=request.path,
+        apply_guidelines=request.apply_guidelines,
+    )
 
     service = EditorService(
         filesystem=FilesystemService(browse_root=settings.browse_root),
@@ -52,7 +58,12 @@ def propose_edit(
     )
     operation_error: Exception | None = None
     try:
-        return service.propose(request, policy=_EDITOR_POLICY, sources=sources)
+        return service.propose(
+            request,
+            policy=_EDITOR_POLICY,
+            sources=sources,
+            guidelines=guidelines,
+        )
     except Exception as exc:
         operation_error = exc
         raise

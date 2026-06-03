@@ -1,3 +1,4 @@
+import pytest
 from calliope.config import EMBEDDING_DIMENSIONS
 from calliope.domain.enums import CanonPolicy
 from calliope.domain.schemas import SourceReference, WorkspaceCreate, WriteRequest
@@ -6,7 +7,6 @@ from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.workspaces import WorkspaceRepository
 from calliope.retrieval.hybrid import HybridRetriever
 from calliope.services.write import WriteService
-import pytest
 from sqlalchemy.orm import Session
 
 

@@ -19,6 +19,7 @@ class WorkspaceRepository:
             include_globs=payload.include_globs,
             exclude_globs=payload.exclude_globs,
             versioning_enabled=payload.versioning_enabled,
+            guidelines=payload.guidelines or None,
         )
         self.session.add(workspace)
         try:
@@ -59,6 +60,9 @@ class WorkspaceRepository:
         # explicit null from an omitted field via the set of provided fields.
         if "versioning_enabled" in payload.model_fields_set:
             workspace.versioning_enabled = payload.versioning_enabled
+        # None means unchanged; an empty string clears the standing guidelines.
+        if payload.guidelines is not None:
+            workspace.guidelines = payload.guidelines or None
         try:
             self.session.commit()
         except IntegrityError as exc:
@@ -117,5 +121,6 @@ class WorkspaceRepository:
             include_globs=workspace.include_globs,
             exclude_globs=workspace.exclude_globs,
             versioning_enabled=workspace.versioning_enabled,
+            guidelines=workspace.guidelines,
             created_at=workspace.created_at,
         )

@@ -116,6 +116,7 @@ def build_chat_messages(
     sources: list[SourceReference],
     cited_documents: list[CitedDocument] | None = None,
     history: list[HistoryTurn] | None = None,
+    guidelines: str | None = None,
 ) -> list[dict[str, str]]:
     source_blocks = "\n\n".join(_format_source(source) for source in sources)
     if not source_blocks:
@@ -130,14 +131,14 @@ def build_chat_messages(
     user_parts.append(f"Indexed canon sources:\n{source_blocks}")
     user_parts.append(_RECENCY_REMINDER)
 
-    system_msg: dict[str, str] = {
-        "role": "system",
-        "content": (
-            "You are Calliope, a grounded worldbuilding assistant.\n"
-            f"{POLICY_TEXT[policy]}\n"
-            "Cite sources by path when using canon details."
-        ),
-    }
+    system_content = (
+        "You are Calliope, a grounded worldbuilding assistant.\n"
+        f"{POLICY_TEXT[policy]}\n"
+        "Cite sources by path when using canon details."
+    )
+    if guidelines and guidelines.strip():
+        system_content += f"\n\n{_format_guidelines_block(guidelines)}"
+    system_msg: dict[str, str] = {"role": "system", "content": system_content}
     user_msg: dict[str, str] = {
         "role": "user",
         "content": "\n\n".join(user_parts),
@@ -187,6 +188,7 @@ def build_write_messages(
     sources: list[SourceReference],
     cited_documents: list[CitedDocument] | None = None,
     history: list[HistoryTurn] | None = None,
+    guidelines: str | None = None,
 ) -> list[dict[str, str]]:
     source_blocks = "\n\n".join(_format_source(source) for source in sources)
     if not source_blocks:
@@ -205,32 +207,32 @@ def build_write_messages(
     user_parts.append(f"Indexed canon sources:\n{source_blocks}")
     user_parts.append(_WRITE_RECENCY_REMINDER)
 
-    system_msg: dict[str, str] = {
-        "role": "system",
-        "content": (
-            "You are Calliope, collaborating on a single living markdown document "
-            "(the canvas).\n"
-            "Your task is to apply the writer's instruction to the current canvas and "
-            "return the complete revised document.\n"
-            "The canvas in the user message is the sole source of document state; do not "
-            "rely on conversation history for the document's prior content.\n\n"
-            "OUTPUT CONTRACT — read this carefully before generating any text:\n"
-            "- Return ONLY the raw markdown of the revised document, from the very first "
-            "character to the very last.\n"
-            "- Do NOT wrap output in code fences (no ```markdown, no ``` of any kind).\n"
-            "- Do NOT add any preamble, commentary, explanation, or sign-off before or "
-            "after the document.\n"
-            '- Do NOT insert grounding markers, citation tags, "(inference)", '
-            '"(invented)", or "[path/to/file.md]" anywhere in the document body. '
-            "Canon sources constrain what you may write, not how you annotate it.\n\n"
-            f"{_COMPLETENESS_CONTRACT}\n"
-            "- If the canvas is empty, create the document from scratch based on the "
-            "instruction and sources.\n"
-            "- If you reach what feels like a natural stopping point before the document "
-            "is complete: keep writing. There is no partial credit.\n\n"
-            f"GROUNDING:\n{WRITE_POLICY_TEXT[policy]}"
-        ),
-    }
+    system_content = (
+        "You are Calliope, collaborating on a single living markdown document "
+        "(the canvas).\n"
+        "Your task is to apply the writer's instruction to the current canvas and "
+        "return the complete revised document.\n"
+        "The canvas in the user message is the sole source of document state; do not "
+        "rely on conversation history for the document's prior content.\n\n"
+        "OUTPUT CONTRACT — read this carefully before generating any text:\n"
+        "- Return ONLY the raw markdown of the revised document, from the very first "
+        "character to the very last.\n"
+        "- Do NOT wrap output in code fences (no ```markdown, no ``` of any kind).\n"
+        "- Do NOT add any preamble, commentary, explanation, or sign-off before or "
+        "after the document.\n"
+        '- Do NOT insert grounding markers, citation tags, "(inference)", '
+        '"(invented)", or "[path/to/file.md]" anywhere in the document body. '
+        "Canon sources constrain what you may write, not how you annotate it.\n\n"
+        f"{_COMPLETENESS_CONTRACT}\n"
+        "- If the canvas is empty, create the document from scratch based on the "
+        "instruction and sources.\n"
+        "- If you reach what feels like a natural stopping point before the document "
+        "is complete: keep writing. There is no partial credit.\n\n"
+        f"GROUNDING:\n{WRITE_POLICY_TEXT[policy]}"
+    )
+    if guidelines and guidelines.strip():
+        system_content += f"\n\n{_format_guidelines_block(guidelines)}"
+    system_msg: dict[str, str] = {"role": "system", "content": system_content}
     user_msg: dict[str, str] = {
         "role": "user",
         "content": "\n\n".join(user_parts),
@@ -250,6 +252,7 @@ def build_document_edit_messages(
     mode: EditMode,
     policy: CanonPolicy = CanonPolicy.CANON_PLUS_INFERENCE,
     sources: list[SourceReference] | None = None,
+    guidelines: str | None = None,
 ) -> list[dict[str, str]]:
     if mode is EditMode.APPEND:
         mode_instruction = (
@@ -279,6 +282,8 @@ def build_document_edit_messages(
         "If the instruction asks you to invent content that contradicts the document's "
         "established facts, note the contradiction and decline rather than override it."
     )
+    if guidelines and guidelines.strip():
+        system_content += f"\n\n{_format_guidelines_block(guidelines)}"
 
     user_content = f"Instruction:\n{instruction}\n\nCurrent document:\n<<<\n{content}\n>>>"
 
@@ -300,3 +305,13 @@ def _format_source(source: SourceReference) -> str:
 
 def _format_cited_document(doc: CitedDocument) -> str:
     return f"Path: {doc.path}\nTitle: {doc.title}\nContent:\n{doc.content}"
+
+
+def _format_guidelines_block(guidelines: str) -> str:
+    return (
+        "WORKSPACE GUIDELINES (standing creative and stylistic context for this world):\n"
+        f"{guidelines.strip()}\n"
+        "Apply these as background framing for tone, setting, and style. They do NOT "
+        "override the grounding rules above: never invent, alter, or contradict canon to "
+        "satisfy a guideline, and never emit a guideline as if it were a cited fact."
+    )

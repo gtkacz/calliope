@@ -39,4 +39,58 @@ describe('ComposerBar', () => {
       'characters/protagonists/kaelen.md',
     )
   })
+
+  it('shows the guidelines toggle when the selected workspace has guidelines', () => {
+    const wrapper = mount(ComposerBar, {
+      props: {
+        mode: 'chat',
+        policy: 'strict_canon',
+        selectedWorkspaceId: 'workspace_1',
+        selectedChatProfileId: 'profile_1',
+        workspaces: [
+          {
+            id: 'workspace_1',
+            name: 'World',
+            root_path: '/tmp/world',
+            include_globs: [],
+            exclude_globs: [],
+            created_at: '2026-05-20T12:00:00Z',
+            guidelines: 'This is a dark fantasy world.',
+          },
+        ],
+        profiles: [],
+        pending: false,
+        disabled: false,
+      },
+    })
+
+    expect(wrapper.find('[data-test="guidelines-toggle"]').exists()).toBe(true)
+  })
+
+  it('hides the guidelines toggle when the workspace has no guidelines', () => {
+    const wrapper = mount(ComposerBar, {
+      props: {
+        mode: 'chat',
+        policy: 'strict_canon',
+        selectedWorkspaceId: 'workspace_1',
+        selectedChatProfileId: 'profile_1',
+        workspaces: [
+          {
+            id: 'workspace_1',
+            name: 'World',
+            root_path: '/tmp/world',
+            include_globs: [],
+            exclude_globs: [],
+            created_at: '2026-05-20T12:00:00Z',
+            guidelines: null,
+          },
+        ],
+        profiles: [],
+        pending: false,
+        disabled: false,
+      },
+    })
+
+    expect(wrapper.find('[data-test="guidelines-toggle"]').exists()).toBe(false)
+  })
 })

@@ -22,6 +22,7 @@ class WorkspaceCreate(BaseModel):
     )
     # Tri-state: None inherits the global versioning flag; True/False overrides it.
     versioning_enabled: bool | None = None
+    guidelines: str | None = None
 
 
 class WorkspacePatch(BaseModel):
@@ -30,6 +31,7 @@ class WorkspacePatch(BaseModel):
     include_globs: list[str] | None = None
     exclude_globs: list[str] | None = None
     versioning_enabled: bool | None = None
+    guidelines: str | None = None
 
 
 class WorkspaceRead(WorkspaceCreate):
@@ -156,6 +158,9 @@ class ChatRequest(BaseModel):
     # typical context windows without the prompt budget concern of limit=8.
     limit: int = Field(default=5, ge=1, le=50)
     cited_document_ids: list[str] = Field(default_factory=list)
+    # Whether to inject the workspace's standing guidelines (default on); the
+    # web app toggles this per request.
+    apply_guidelines: bool = True
 
 
 class CitedDocument(BaseModel):
@@ -170,6 +175,7 @@ class EditProposalRequest(BaseModel):
     instruction: str
     mode: EditMode = EditMode.APPEND
     chat_profile_id: str | None = None
+    apply_guidelines: bool = True
 
 
 class EditProposal(BaseModel):
@@ -272,6 +278,7 @@ class WriteRequest(BaseModel):
     # typical context windows without the prompt budget concern of limit=8.
     limit: int = Field(default=5, ge=1, le=50)
     cited_document_ids: list[str] = Field(default_factory=list)
+    apply_guidelines: bool = True
 
 
 class WriteResponse(BaseModel):

@@ -1,6 +1,12 @@
 from calliope.domain.constants import VERSION_STORE_DIRNAME
 from calliope.domain.enums import CanonPolicy, ProfileCapability, ProfileKind
-from calliope.domain.schemas import SourceReference, WorkspaceCreate
+from calliope.domain.schemas import (
+    ChatRequest,
+    EditProposalRequest,
+    SourceReference,
+    WorkspaceCreate,
+    WriteRequest,
+)
 
 
 def test_workspace_create_defaults_globs() -> None:
@@ -15,6 +21,8 @@ def test_workspace_create_defaults_globs() -> None:
     ]
     # Per-workspace versioning is unset by default, inheriting the global flag.
     assert payload.versioning_enabled is None
+    # Guidelines are unset by default — the workspace has no standing directive.
+    assert payload.guidelines is None
 
 
 def test_source_reference_contains_citation_fields() -> None:
@@ -44,3 +52,9 @@ def test_enums_cover_mvp_values() -> None:
     assert ProfileCapability.EMBEDDINGS == "embeddings"
     assert ProfileCapability.RERANK == "rerank"
     assert ProfileCapability.STREAMING == "streaming"
+
+
+def test_generation_requests_apply_guidelines_by_default() -> None:
+    assert ChatRequest(message="hi").apply_guidelines is True
+    assert WriteRequest(message="hi").apply_guidelines is True
+    assert EditProposalRequest(path="a.md", instruction="x").apply_guidelines is True

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import type { Workspace } from '../types'
@@ -10,6 +10,7 @@ interface WorkspaceForm {
   root_path: string
   include_globs: string[]
   exclude_globs: string[]
+  guidelines: string
 }
 
 const store = useWorkspaceStore()
@@ -20,7 +21,19 @@ const form = reactive<WorkspaceForm>({
   root_path: '',
   include_globs: ['**/*.md', '**/*.markdown'],
   exclude_globs: ['.git/**', '.venv/**', 'node_modules/**'],
+  guidelines: '',
 })
+
+// Soft ceiling only. At the default retrieval limit, sources already inject
+// ~9000 chars of canon into the prompt; keeping guidelines under ~a quarter of
+// that leaves room for the grounding the answer must use, and stays safe on the
+// small-context local models this project targets. Advisory — a longer style
+// bible is still allowed; we only warn.
+const GUIDELINES_SOFT_LIMIT_CHARS = 2000
+
+const guidelinesTooLong = computed(
+  () => form.guidelines.length > GUIDELINES_SOFT_LIMIT_CHARS,
+)
 
 onMounted(() => store.refresh())
 
@@ -30,6 +43,7 @@ function edit(workspace: Workspace) {
   form.root_path = workspace.root_path
   form.include_globs = [...workspace.include_globs]
   form.exclude_globs = [...workspace.exclude_globs]
+  form.guidelines = workspace.guidelines ?? ''
 }
 
 async function save() {
@@ -39,6 +53,7 @@ async function save() {
       root_path: form.root_path,
       include_globs: form.include_globs,
       exclude_globs: form.exclude_globs,
+      guidelines: form.guidelines,
     },
     editingId.value,
   )
@@ -145,6 +160,32 @@ async function save() {
           hide-no-data
           placeholder=".git/**"
         />
+      </div>
+
+      <div class="panel-field">
+        <label class="calliope-eyebrow panel-field__label">Guidelines</label>
+        <v-textarea
+          v-model="form.guidelines"
+          :rows="4"
+          auto-grow
+          hide-details
+          placeholder="Standing context for every response in this workspace — e.g. “this is a dark fantasy world.”"
+        />
+        <span class="panel-field__hint">
+          Injected into chat, write, and editor prompts for this workspace. Toggle
+          per request in the composer.
+        </span>
+        <v-alert
+          v-if="guidelinesTooLong"
+          type="warning"
+          variant="tonal"
+          density="compact"
+          class="panel-alert"
+        >
+          {{ form.guidelines.length }} characters — long guidelines crowd out
+          retrieved canon and may weaken grounding on small-context models. You can
+          still save.
+        </v-alert>
       </div>
 
       <v-alert v-if="store.errorMessage" type="error" variant="tonal" class="panel-alert">

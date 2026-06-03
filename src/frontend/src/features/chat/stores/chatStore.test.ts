@@ -131,4 +131,87 @@ describe('chatStore', () => {
       expect.objectContaining({ cited_document_ids: [] }),
     )
   })
+
+  it('sends apply_guidelines true by default for chat', async () => {
+    const sendChat = vi.spyOn(chatApi, 'sendChat').mockResolvedValue({
+      session: {
+        id: 'session_1',
+        title: 'Lake city',
+        folder_id: null,
+        workspace_id: 'workspace_1',
+        created_at: '2026-05-20T12:00:00Z',
+        updated_at: '2026-05-20T12:05:00Z',
+      },
+      user_message: {
+        id: 'message_user',
+        session_id: 'session_1',
+        role: 'user',
+        content: 'Question',
+        metadata: { turn_kind: 'chat_user' },
+        created_at: '2026-05-20T12:00:00Z',
+      },
+      assistant_message: {
+        id: 'message_assistant',
+        session_id: 'session_1',
+        role: 'assistant',
+        content: 'Answer',
+        metadata: { turn_kind: 'assistant' },
+        created_at: '2026-05-20T12:01:00Z',
+      },
+      answer: 'Answer',
+      sources: [],
+      trace_id: 'trace_1',
+    })
+
+    const store = useChatStore()
+    store.selectedWorkspaceId = 'workspace_1'
+    store.selectedChatProfileId = 'profile_1'
+    await store.submitMessage('Question')
+
+    expect(sendChat).toHaveBeenCalledWith(
+      expect.objectContaining({ apply_guidelines: true }),
+    )
+  })
+
+  it('respects the chat guidelines toggle when disabled', async () => {
+    const sendChat = vi.spyOn(chatApi, 'sendChat').mockResolvedValue({
+      session: {
+        id: 'session_1',
+        title: 'Lake city',
+        folder_id: null,
+        workspace_id: 'workspace_1',
+        created_at: '2026-05-20T12:00:00Z',
+        updated_at: '2026-05-20T12:05:00Z',
+      },
+      user_message: {
+        id: 'message_user',
+        session_id: 'session_1',
+        role: 'user',
+        content: 'Question',
+        metadata: { turn_kind: 'chat_user' },
+        created_at: '2026-05-20T12:00:00Z',
+      },
+      assistant_message: {
+        id: 'message_assistant',
+        session_id: 'session_1',
+        role: 'assistant',
+        content: 'Answer',
+        metadata: { turn_kind: 'assistant' },
+        created_at: '2026-05-20T12:01:00Z',
+      },
+      answer: 'Answer',
+      sources: [],
+      trace_id: 'trace_1',
+    })
+
+    const store = useChatStore()
+    store.selectedWorkspaceId = 'workspace_1'
+    store.selectedChatProfileId = 'profile_1'
+    store.applyGuidelinesChat = false
+    await store.submitMessage('Question')
+
+    expect(sendChat).toHaveBeenCalledWith(
+      expect.objectContaining({ apply_guidelines: false }),
+    )
+  })
 })

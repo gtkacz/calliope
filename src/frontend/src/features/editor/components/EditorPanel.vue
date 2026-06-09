@@ -301,7 +301,24 @@ const modeOptions: { value: EditMode; label: string }[] = [
           </div>
         </div>
 
-        <div v-if="proposal.truncated" class="editor-panel__section">
+        <!-- Overflow suppresses the truncation alert: when the prompt itself was
+             cut, raising Max tokens shrinks the prompt budget further. -->
+        <div v-if="proposal.context_overflow" class="editor-panel__section">
+          <v-alert
+            type="warning"
+            variant="tonal"
+            density="compact"
+            border="start"
+          >
+            The request exceeded the model's context window, so the server dropped
+            part of the prompt before generating — this proposal may ignore the
+            document or instructions. Shorten the document or instruction, or run
+            the model server with a larger context size (and raise
+            <strong>CALLIOPE_DEFAULT_NUM_CTX</strong> to match).
+          </v-alert>
+        </div>
+
+        <div v-else-if="proposal.truncated" class="editor-panel__section">
           <v-alert
             type="warning"
             variant="tonal"

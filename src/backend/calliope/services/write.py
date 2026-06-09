@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from calliope.config import DEFAULT_MAX_CONTINUATION_ROUNDS
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import (
     CitedDocument,
@@ -10,11 +11,18 @@ from calliope.domain.schemas import (
     WriteResponse,
 )
 from calliope.llm.openai_compatible import ChatCompletion
+from calliope.prompts.budget import (
+    PromptTrim,
+    estimate_messages_chars,
+    prompt_budget_chars,
+    trim_to_budget,
+)
 from calliope.prompts.builder import HistoryTurn, build_write_messages
 from calliope.repositories.chats import ChatRepository
 from calliope.repositories.chunks import ChunkRepository
 from calliope.repositories.documents import DocumentRepository
 from calliope.retrieval.hybrid import EmbeddingClient, RerankClient, _AsyncRunner, aclose_client
+from calliope.services.continuation import generate_with_continuation
 from calliope.services.guidelines import resolve_workspace_guidelines
 from calliope.services.search import SearchService
 from sqlalchemy.orm import Session
@@ -38,6 +46,7 @@ class WriteService:
         close_rerank_client: bool = False,
         score_threshold: float = 0.0,
         rerank_client: RerankClient | None = None,
+        max_continuation_rounds: int = DEFAULT_MAX_CONTINUATION_ROUNDS,
     ) -> None:
         self.session = session
         self.embedding_client = embedding_client
@@ -48,6 +57,7 @@ class WriteService:
         self._close_rerank_client = close_rerank_client
         self._score_threshold = score_threshold
         self._rerank_client = rerank_client
+        self._max_continuation_rounds = max_continuation_rounds
 
     def write(self, request: WriteRequest) -> WriteResponse:
         repository = ChatRepository(self.session)
@@ -120,19 +130,49 @@ class WriteService:
             workspace_id=request.workspace_id,
             apply_guidelines=request.apply_guidelines,
         )
+        sources = search_response.sources
         messages = build_write_messages(
             message=request.message,
             policy=request.policy,
             canvas=request.canvas,
-            sources=search_response.sources,
+            sources=sources,
             cited_documents=cited_documents or None,
             history=history,
             guidelines=guidelines,
         )
-        completion = self._async_runner.run(self.chat_client.chat(messages))
+        trim = PromptTrim()
+        budget = prompt_budget_chars(self.chat_client)
+        if budget is not None:
+            overage = estimate_messages_chars(messages) - budget
+            if overage > 0:
+                sources, kept_cited, history, trim = trim_to_budget(
+                    overage_chars=overage,
+                    sources=sources,
+                    cited_documents=cited_documents or None,
+                    history=history,
+                )
+                cited_documents = kept_cited or []
+                messages = build_write_messages(
+                    message=request.message,
+                    policy=request.policy,
+                    canvas=request.canvas,
+                    sources=sources,
+                    cited_documents=cited_documents or None,
+                    history=history,
+                    guidelines=guidelines,
+                )
+        completion = generate_with_continuation(
+            runner=self._async_runner,
+            chat_client=self.chat_client,
+            messages=messages,
+            instruction=request.message,
+            policy=request.policy,
+            guidelines=guidelines,
+            max_rounds=self._max_continuation_rounds,
+        )
         new_canvas = completion.content
 
-        sources = search_response.sources
+        trim_metadata = trim.as_metadata()
         try:
             session_id = request.session_id
             if session_id is None:
@@ -162,6 +202,13 @@ class WriteService:
                     "cited_document_ids": [doc.document_id for doc in cited_documents],
                     "cited_paths": [doc.path for doc in cited_documents],
                     "truncated": completion.truncated,
+                    "context_overflow": completion.context_overflow,
+                    **(
+                        {"continuation_rounds": completion.continuation_rounds}
+                        if completion.continuation_rounds
+                        else {}
+                    ),
+                    **({"prompt_trim": trim_metadata} if trim_metadata else {}),
                 },
             )
             trace = repository.add_trace(

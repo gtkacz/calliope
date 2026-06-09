@@ -184,6 +184,9 @@ class EditProposal(BaseModel):
     original_content: str
     proposed_content: str
     truncated: bool = False
+    # The server reported a tokenized prompt far smaller than what was sent: part
+    # of the prompt (document, instruction, or grounding) never reached the model.
+    context_overflow: bool = False
 
 
 class DocumentRead(BaseModel):

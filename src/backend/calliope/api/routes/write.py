@@ -68,6 +68,7 @@ def write(
         close_rerank_client=True,
         score_threshold=settings.retrieval_score_threshold,
         rerank_client=rerank_client,
+        max_continuation_rounds=settings.max_continuation_rounds,
     )
     operation_error: Exception | None = None
     try:

@@ -62,7 +62,7 @@ def profile_client(
         api_key=api_key_for(profile.api_key_ref),
         timeout_seconds=settings.llm_request_timeout_seconds,
         use_ollama_native=is_ollama,
-        num_ctx=settings.default_num_ctx if is_ollama else None,
+        num_ctx=settings.default_num_ctx,
         use_koboldcpp=is_koboldcpp,
     )
 

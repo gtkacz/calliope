@@ -26,6 +26,10 @@ function sourcesFor(message: MessageRead): SourceReference[] {
 function truncatedFor(message: MessageRead): boolean {
   return message.metadata.truncated === true
 }
+
+function contextOverflowFor(message: MessageRead): boolean {
+  return message.metadata.context_overflow === true
+}
 </script>
 
 <template>
@@ -56,6 +60,7 @@ function truncatedFor(message: MessageRead): boolean {
           :content="message.content"
           :sources="sourcesFor(message)"
           :truncated="truncatedFor(message)"
+          :context-overflow="contextOverflowFor(message)"
         />
       </Motion>
     </template>

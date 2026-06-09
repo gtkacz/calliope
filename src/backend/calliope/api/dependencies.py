@@ -67,7 +67,10 @@ def get_chat_client(
         timeout_seconds=settings.llm_request_timeout_seconds,
         sampling_params=params,
         use_ollama_native=is_ollama,
-        num_ctx=settings.default_num_ctx if is_ollama else None,
+        # Every kind gets the window: Ollama sends it as options.num_ctx, KoboldCpp
+        # as max_context_length, and all kinds use it for client-side prompt
+        # budgeting and overflow detection.
+        num_ctx=settings.default_num_ctx,
         use_koboldcpp=is_koboldcpp,
     )
 
@@ -101,6 +104,6 @@ def get_chat_client_for_profile(
         timeout_seconds=settings.llm_request_timeout_seconds,
         sampling_params=params,
         use_ollama_native=is_ollama,
-        num_ctx=settings.default_num_ctx if is_ollama else None,
+        num_ctx=settings.default_num_ctx,
         use_koboldcpp=is_koboldcpp,
     )

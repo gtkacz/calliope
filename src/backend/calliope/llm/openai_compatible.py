@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import httpx
-from calliope.config import DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS
+from calliope.config import DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS, ESTIMATED_CHARS_PER_TOKEN
 from calliope.domain.errors import AppError
 from calliope.llm.sampling import SamplingParams
 
@@ -15,17 +15,32 @@ logger = logging.getLogger(__name__)
 # otherwise indistinguishable from a complete response.
 _FINISH_REASON_LENGTH = "length"
 
+# The char-ratio token estimate legitimately runs high on token-dense prose
+# (long words pack more characters per token), so a reported prompt size below
+# the estimate is only evidence of server-side trimming once it falls past this
+# fraction AND by a non-trivial absolute amount. Both gates together keep
+# tokenizer variance from raising false overflow alarms.
+_OVERFLOW_DETECTION_RATIO = 0.7
+_OVERFLOW_MIN_SHORTFALL_TOKENS = 256
+
 
 @dataclass(frozen=True)
 class ChatCompletion:
-    """A chat generation plus the one piece of response metadata callers act on.
+    """A chat generation plus the response metadata callers act on.
 
     `truncated` carries the finish_reason=length signal up to the service layer so
     a cut-off document can be flagged to the writer, rather than being silently
-    stored as if complete."""
+    stored as if complete.
+
+    `context_overflow` reports that the server's tokenized prompt came back far
+    smaller than what was sent: the backend silently discarded part of the prompt
+    (typically the front, where the system contract lives) before generating.
+    Distinguished from `truncated` because the remedies are opposite — overflow
+    calls for a smaller prompt or bigger window, not a higher max_tokens."""
 
     content: str
     truncated: bool = False
+    context_overflow: bool = False
 
 
 def verify_embedding_dimension(
@@ -124,6 +139,13 @@ class OpenAICompatibleClient:
             # silently ignores OpenAI's repetition_penalty, which would otherwise
             # leave repetition unconstrained.
             payload["rep_pen"] = payload.pop("repetition_penalty")
+        if self.use_koboldcpp and self.num_ctx is not None:
+            # Without an explicit max_context_length KoboldCpp trims the prompt to
+            # its launch-time --contextsize (default 8192) and discards the front —
+            # system contract included — before generating. The /v1 route passes
+            # native genparams through, the same mechanism as rep_pen above. The
+            # value can only shrink the server's window, never grow it.
+            payload["max_context_length"] = self.num_ctx
         response = await self._post(
             f"{self.base_url}/chat/completions",
             code="generation_failed",
@@ -143,7 +165,50 @@ class OpenAICompatibleClient:
                 payload.get("max_tokens"),
                 self.model,
             )
-        return ChatCompletion(content=choice["message"]["content"], truncated=truncated)
+        context_overflow = self._detect_context_overflow(messages, data.get("usage"))
+        return ChatCompletion(
+            content=choice["message"]["content"],
+            truncated=truncated,
+            context_overflow=context_overflow,
+        )
+
+    def _detect_context_overflow(
+        self,
+        messages: list[dict[str, Any]],
+        usage: dict[str, Any] | None,
+    ) -> bool:
+        """Infer server-side prompt trimming from the reported prompt token count.
+
+        Backends that overflow their context window trim silently and still finish
+        with reason "stop", so the only observable trace is usage.prompt_tokens
+        landing far below the size of what was sent. Detection is skipped when the
+        server reports no usage block (some local backends omit it)."""
+        if not usage:
+            return False
+        prompt_tokens = usage.get("prompt_tokens")
+        if not isinstance(prompt_tokens, int):
+            return False
+        estimated_tokens = (
+            sum(len(message.get("content") or "") for message in messages)
+            // ESTIMATED_CHARS_PER_TOKEN
+        )
+        shortfall = estimated_tokens - prompt_tokens
+        overflow = (
+            prompt_tokens < estimated_tokens * _OVERFLOW_DETECTION_RATIO
+            and shortfall >= _OVERFLOW_MIN_SHORTFALL_TOKENS
+        )
+        if overflow:
+            logger.warning(
+                "prompt was likely truncated server-side: sent ~%s estimated tokens but "
+                "the server reports prompt_tokens=%s (num_ctx=%s, model=%s). The model "
+                "never saw part of the prompt — reduce attached documents/sources or "
+                "raise the server's context size and CALLIOPE_DEFAULT_NUM_CTX.",
+                estimated_tokens,
+                prompt_tokens,
+                self.num_ctx,
+                self.model,
+            )
+        return overflow
 
     def _ollama_base(self) -> str:
         """Return the Ollama server root, stripping a trailing ``/v1``.
@@ -207,6 +272,10 @@ class OpenAICompatibleClient:
                 options.get("num_predict"),
                 self.model,
             )
+        # No overflow detection here: Ollama's prompt_eval_count omits KV-cached
+        # tokens, so on any warm session it underreports the prompt and would
+        # raise constant false alarms. num_ctx is sent explicitly above and the
+        # service layer budgets the prompt against it, which covers this path.
         return ChatCompletion(content=message.get("content", ""), truncated=truncated)
 
     def _headers(self) -> dict[str, str]:

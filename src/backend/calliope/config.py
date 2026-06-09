@@ -7,7 +7,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # requires a migration that alters the `chunks.embedding` column and re-embeds
 # every document, because vectors of different widths are not comparable.
 EMBEDDING_DIMENSIONS = 1024
-DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
+
+# Generation is a single non-streaming POST, so the read timeout must outlive an
+# entire completion. A full DEFAULT_MAX_TOKENS document on a local model at
+# 10-30 tok/s takes several minutes; the previous 120s produced 502s
+# (httpx.ReadTimeout) precisely on the long write-mode generations that matter.
+DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 600
 
 # Explicit completion ceiling sent on every generation request. OpenAI-compatible
 # servers that receive no max_tokens fall back to their own default cap, which on
@@ -17,17 +22,36 @@ DEFAULT_LLM_REQUEST_TIMEOUT_SECONDS = 120
 # window of every local model Calliope targets; operators raise it per deployment.
 DEFAULT_MAX_TOKENS = 4096
 
-# Context window (in tokens) sent as options.num_ctx on Ollama-native profiles.
-# Ollama defaults num_ctx to a small value (2048 on older builds, 4096 on current)
-# and SILENTLY left-truncates any prompt that exceeds it, discarding the system
-# prompt — and its format contract — before generation begins. A RAG "write a
-# chapter from these lore documents" prompt overruns that easily, which is why
-# such output comes back short, hallucinated, and off-format. An explicit, large
-# window is therefore required for grounded long-form generation. 32768 holds the
-# lore + canvas + history budget on modern local models; operators lower it for
-# memory-constrained hosts. Only sent for ProfileKind.OLLAMA — the OpenAI /v1
-# endpoint has no way to set it.
+# Context window (in tokens) Calliope assumes the model server provides. Local
+# backends SILENTLY front-truncate any prompt exceeding their window (Ollama's
+# default num_ctx is 2048-4096; KoboldCpp's default --contextsize is 8192),
+# discarding the system prompt — and its grounding/format contract — before
+# generation begins, which is why overflowing output comes back short,
+# hallucinated, and off-format. The value is sent as options.num_ctx on
+# Ollama-native profiles and as max_context_length on KoboldCpp profiles (its
+# /v1 route passes native genparams through), and every profile kind uses it to
+# budget prompt assembly (see prompts/budget.py). It can only shrink a server's
+# window, never grow it, so operators must set this to match the server's real
+# launched context size.
 DEFAULT_NUM_CTX = 32768
+
+# English prose averages ~4 characters per token on the tokenizers Calliope
+# targets. Used for prompt budgeting and context-overflow detection, which need
+# order-of-magnitude accuracy without shipping a per-model tokenizer.
+ESTIMATED_CHARS_PER_TOKEN = 4
+
+# Fraction of the nominal prompt window the budgeter actually fills. The slack
+# absorbs what the char-ratio estimate cannot see: chat-template tags, message
+# framing, and tokenizer variance across models.
+PROMPT_BUDGET_SAFETY = 0.9
+
+# Upper bound on how many continuation requests one write/edit generation may
+# chain after a response ends at the token ceiling (finish_reason=length). Each
+# round adds up to max_tokens of output from a fresh bounded-context request, so
+# documents can grow ~4x the per-request ceiling even on a small context window,
+# while a model that never emits a natural stop cannot loop forever. 0 disables
+# continuation entirely.
+DEFAULT_MAX_CONTINUATION_ROUNDS = 3
 
 # RRF scores top out ~0.033 for rank-1; 0.005 eliminates only true noise
 # (rank >> 100 from both sources) while keeping at least one result unless
@@ -55,6 +79,7 @@ class Settings(BaseSettings):
     )
     default_max_tokens: int = Field(default=DEFAULT_MAX_TOKENS, gt=0)
     default_num_ctx: int = Field(default=DEFAULT_NUM_CTX, gt=0)
+    max_continuation_rounds: int = Field(default=DEFAULT_MAX_CONTINUATION_ROUNDS, ge=0)
     cors_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"],
     )

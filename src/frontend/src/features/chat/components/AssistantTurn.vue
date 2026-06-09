@@ -13,6 +13,7 @@ const props = defineProps<{
   content: string
   sources?: SourceReference[]
   truncated?: boolean
+  contextOverflow?: boolean
 }>()
 
 const viewer = useSourceViewerStore()
@@ -69,7 +70,18 @@ function onContentClick(event: MouseEvent) {
       @click="onContentClick"
       v-html="renderedContent"
     />
-    <div v-if="truncated" class="assistant-turn__notice" role="status">
+    <!-- Overflow suppresses the truncation notice: when the prompt itself was cut,
+         "raise Max tokens" is counterproductive advice (it shrinks the prompt budget). -->
+    <div v-if="contextOverflow" class="assistant-turn__notice" role="status">
+      <span class="calliope-eyebrow assistant-turn__notice-label">Context overflow</span>
+      <p class="assistant-turn__notice-body">
+        The request exceeded the model's context window, so the server dropped part of the
+        prompt before generating — this response may ignore canon or instructions. Detach or
+        shorten cited documents, or run the model server with a larger context size (and
+        raise <strong>CALLIOPE_DEFAULT_NUM_CTX</strong> to match).
+      </p>
+    </div>
+    <div v-else-if="truncated" class="assistant-turn__notice" role="status">
       <span class="calliope-eyebrow assistant-turn__notice-label">Truncated</span>
       <p class="assistant-turn__notice-body">
         This response hit the model's length limit and may be cut off. Raise

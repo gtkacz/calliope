@@ -55,6 +55,7 @@ def propose_edit(
         filesystem=FilesystemService(browse_root=settings.browse_root),
         chat_client=chat_client,
         close_chat_client=True,
+        max_continuation_rounds=settings.max_continuation_rounds,
     )
     operation_error: Exception | None = None
     try:

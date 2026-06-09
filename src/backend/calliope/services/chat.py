@@ -5,6 +5,12 @@ from typing import Protocol
 from calliope.domain.errors import AppError
 from calliope.domain.schemas import ChatRequest, ChatResponse, CitedDocument, SearchRequest
 from calliope.llm.openai_compatible import ChatCompletion
+from calliope.prompts.budget import (
+    PromptTrim,
+    estimate_messages_chars,
+    prompt_budget_chars,
+    trim_to_budget,
+)
 from calliope.prompts.builder import (
     HistoryTurn,
     build_chat_messages,
@@ -117,16 +123,38 @@ class ChatService:
             workspace_id=request.workspace_id,
             apply_guidelines=request.apply_guidelines,
         )
+        sources = search_response.sources
         messages = build_chat_messages(
             message=request.message,
             policy=request.policy,
-            sources=search_response.sources,
+            sources=sources,
             cited_documents=cited_documents or None,
             history=history,
             guidelines=guidelines,
         )
+        trim = PromptTrim()
+        budget = prompt_budget_chars(self.chat_client)
+        if budget is not None:
+            overage = estimate_messages_chars(messages) - budget
+            if overage > 0:
+                sources, kept_cited, history, trim = trim_to_budget(
+                    overage_chars=overage,
+                    sources=sources,
+                    cited_documents=cited_documents or None,
+                    history=history,
+                )
+                cited_documents = kept_cited or []
+                messages = build_chat_messages(
+                    message=request.message,
+                    policy=request.policy,
+                    sources=sources,
+                    cited_documents=cited_documents or None,
+                    history=history,
+                    guidelines=guidelines,
+                )
         completion = self._async_runner.run(self.chat_client.chat(messages))
         answer = completion.content
+        trim_metadata = trim.as_metadata()
 
         new_session_title: str | None = None
         if request.session_id is None:
@@ -160,13 +188,13 @@ class ChatService:
                     "turn_kind": "assistant",
                     "policy": request.policy.value,
                     "chat_profile_id": request.chat_profile_id,
-                    "source_count": len(search_response.sources),
-                    "sources": [
-                        source.model_dump(mode="json") for source in search_response.sources
-                    ],
+                    "source_count": len(sources),
+                    "sources": [source.model_dump(mode="json") for source in sources],
                     "cited_document_ids": [doc.document_id for doc in cited_documents],
                     "cited_paths": [doc.path for doc in cited_documents],
                     "truncated": completion.truncated,
+                    "context_overflow": completion.context_overflow,
+                    **({"prompt_trim": trim_metadata} if trim_metadata else {}),
                 },
             )
             trace = repository.add_trace(
@@ -174,8 +202,8 @@ class ChatService:
                 message_id=assistant_message.id,
                 query=request.message,
                 policy=request.policy,
-                sources=search_response.sources,
-                scores={source.chunk_id: source.score for source in search_response.sources},
+                sources=sources,
+                scores={source.chunk_id: source.score for source in sources},
             )
             repository.touch_session(session_id)
             self.session.commit()
@@ -188,7 +216,7 @@ class ChatService:
             user_message=repository.message_to_read(user_message),
             assistant_message=repository.message_to_read(assistant_message),
             answer=answer,
-            sources=search_response.sources,
+            sources=sources,
             trace_id=trace.id,
         )
 

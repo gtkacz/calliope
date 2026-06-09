@@ -245,6 +245,51 @@ def build_write_messages(
     return messages
 
 
+# Continuations get a dedicated, deliberately small prompt: the document tail
+# anchors voice and position, the instruction anchors intent, and retrieved
+# sources/history/cited documents are dropped — they shaped the document's
+# structure in the first request, and re-sending them would crowd out the tail
+# inside a small context window, which is the very constraint continuation
+# exists to work around.
+_CONTINUATION_DIRECTIVE = (
+    "Continue the document from the EXACT point where it stops, even if it stops "
+    "mid-sentence. Do not repeat text that is already written, do not summarise it, "
+    "do not restart the document, and do not add commentary. Output only the "
+    "continuation text."
+)
+
+
+def build_continuation_messages(
+    *,
+    instruction: str,
+    policy: CanonPolicy,
+    document_tail: str,
+    guidelines: str | None = None,
+) -> list[dict[str, str]]:
+    system_content = (
+        "You are Calliope, resuming a markdown document whose generation was cut "
+        "off mid-stream.\n"
+        "OUTPUT CONTRACT — read this carefully before generating any text:\n"
+        "- Output ONLY the text that continues the document: no preamble, no code "
+        "fences, no repetition of existing text, and no sign-off.\n"
+        '- Do NOT insert grounding markers, citation tags, "(inference)", '
+        '"(invented)", or "[path/to/file.md]" anywhere in the output.\n\n'
+        f"GROUNDING:\n{WRITE_POLICY_TEXT[policy]}"
+    )
+    if guidelines and guidelines.strip():
+        system_content += f"\n\n{_format_guidelines_block(guidelines)}"
+    user_content = (
+        f"Original instruction for the document:\n{instruction}\n\n"
+        "Document so far (the beginning may be omitted; it may stop mid-sentence):\n"
+        f"<<<\n{document_tail}\n>>>\n\n"
+        f"{_CONTINUATION_DIRECTIVE}"
+    )
+    return [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content},
+    ]
+
+
 def build_document_edit_messages(
     *,
     content: str,

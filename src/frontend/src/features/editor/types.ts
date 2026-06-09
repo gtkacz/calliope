@@ -11,4 +11,5 @@ export interface EditProposal {
   original_content: string;
   proposed_content: string;
   truncated: boolean;
+  context_overflow: boolean;
 }

@@ -2,7 +2,9 @@
 
 Calliope is the goddess of epic poetry.
 
-Calliope is also a Linux-first local markdown knowledge backend for worldbuilding canon. The MVP exposes a FastAPI service and Typer CLI, indexes markdown into Postgres with pgvector, and talks to models through OpenAI-compatible local profiles.
+Calliope is a Linux-first local knowledge tool for tabletop roleplaying games. Keep campaign notes, setting material, rules references, NPCs, locations, session recaps, encounter ideas, and other game documents in ordinary Markdown, then search and work with them through a web UI, FastAPI service, and Typer CLI.
+
+Calliope indexes Markdown into Postgres with pgvector and connects to models through OpenAI-compatible local profiles. Use it for campaign preparation, in-session lookup, continuity and canon tracking, brainstorming with an assistant, or grounded editing of your notes—while keeping the source files on your own machine.
 
 ## Local Development
 
@@ -28,12 +30,12 @@ or inline for a one-off run: `CALLIOPE_BROWSE_ROOT="$HOME" docker compose up`. T
 Run CLI commands inside the running backend container:
 
 ```bash
-docker compose exec backend calliope workspace add /path/inside/container --name my-world
+docker compose exec backend calliope workspace add /path/inside/container --name my-campaign
 docker compose exec backend calliope profiles add default-embeddings openai_compatible http://host.docker.internal:11434/v1 nomic-embed-text --capability embeddings
 docker compose exec backend calliope profiles add default-chat openai_compatible http://host.docker.internal:11434/v1 llama3.1 --capability chat
-docker compose exec backend calliope reindex my-world
-docker compose exec backend calliope search "ancient city beneath the lake"
-docker compose exec backend calliope chat "What does canon say about the lake city?"
+docker compose exec backend calliope reindex my-campaign
+docker compose exec backend calliope search "What happened to the missing caravan?"
+docker compose exec backend calliope chat "Summarize what we know about the missing caravan and cite the relevant notes."
 ```
 
 Use `host.docker.internal` (mapped to `host-gateway` in `docker-compose.yml`) as the base URL when your OpenAI-compatible service (for example, Ollama) runs on the host. On Fedora, bind-mounting workspace markdown directories into the backend container requires the `:Z` suffix on the volume so SELinux relabels the directory for container access.
@@ -64,10 +66,10 @@ uv run calliope serve
 The host-side CLI workflow uses `127.0.0.1` as the model base URL:
 
 ```bash
-uv run calliope workspace add /path/to/world-notes --name my-world
+uv run calliope workspace add /path/to/campaign-notes --name my-campaign
 uv run calliope profiles add default-embeddings openai_compatible http://127.0.0.1:11434/v1 nomic-embed-text --capability embeddings
 uv run calliope profiles add default-chat openai_compatible http://127.0.0.1:11434/v1 llama3.1 --capability chat
-uv run calliope reindex my-world
-uv run calliope search "ancient city beneath the lake"
-uv run calliope chat "What does canon say about the lake city?"
+uv run calliope reindex my-campaign
+uv run calliope search "What happened to the missing caravan?"
+uv run calliope chat "Summarize what we know about the missing caravan and cite the relevant notes."
 ```

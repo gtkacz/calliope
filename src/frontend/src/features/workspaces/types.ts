@@ -13,6 +13,18 @@ export interface ReindexResponse {
   chunks_indexed: number
 }
 
+export interface GlobPreviewBucket {
+  count: number
+  paths: string[]
+}
+
+export interface GlobPreview {
+  visited_count: number
+  included: GlobPreviewBucket
+  ignored: GlobPreviewBucket
+  truncated: boolean
+}
+
 export interface DirectoryEntry {
   name: string
   path: string

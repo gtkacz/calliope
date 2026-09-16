@@ -3,18 +3,38 @@ from typing import Annotated
 from calliope.api.dependencies import get_db_session, get_embedding_client, get_settings
 from calliope.config import Settings
 from calliope.domain.schemas import (
+    GlobPreviewBucket,
+    GlobPreviewRequest,
+    GlobPreviewResponse,
     ReindexRequest,
     ReindexResponse,
     WorkspaceCreate,
     WorkspacePatch,
     WorkspaceRead,
 )
+from calliope.ingest.scanner import preview_workspace_globs
+from calliope.services.filesystem import FilesystemService
 from calliope.ingest.indexer import EmbeddingClient, Reindexer
 from calliope.services.workspaces import WorkspaceService
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
+
+@router.post("/v1/workspaces/glob-preview", response_model=GlobPreviewResponse)
+def preview_workspace_globs_route(
+    payload: GlobPreviewRequest,
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> GlobPreviewResponse:
+    root = FilesystemService(browse_root=settings.browse_root).resolve_directory(payload.root_path)
+    preview = preview_workspace_globs(root, payload.include_globs, payload.exclude_globs)
+    return GlobPreviewResponse(
+        visited_count=preview.visited_count,
+        included=GlobPreviewBucket(count=preview.included_count, paths=preview.included_paths),
+        ignored=GlobPreviewBucket(count=preview.ignored_count, paths=preview.ignored_paths),
+        truncated=preview.truncated,
+    )
 
 
 @router.post("/v1/workspaces", response_model=WorkspaceRead)

@@ -4,7 +4,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from fnmatch import fnmatchcase
 from hashlib import sha256
+from os import scandir
 from pathlib import Path
+from time import monotonic
 
 from calliope.domain.constants import VERSION_STORE_DIRNAME
 
@@ -15,6 +17,16 @@ class ScannedFile:
     relative_path: str
     content_hash: str
     modified_at_ns: int
+
+
+@dataclass(frozen=True)
+class GlobPreview:
+    visited_count: int
+    included_count: int
+    included_paths: list[str]
+    ignored_count: int
+    ignored_paths: list[str]
+    truncated: bool
 
 
 def scan_workspace(
@@ -46,6 +58,79 @@ def scan_workspace(
         )
 
     return files
+
+
+def preview_workspace_globs(
+    root: Path,
+    include_globs: Sequence[str],
+    exclude_globs: Sequence[str],
+    *,
+    max_files: int = 20_000,
+    deadline_seconds: float = 0.5,
+    sample_limit: int = 100,
+) -> GlobPreview:
+    """Classify regular files without opening them or following directory symlinks."""
+    root = root.resolve()
+    started_at = monotonic()
+    visited_count = included_count = ignored_count = 0
+    included_paths: list[str] = []
+    ignored_paths: list[str] = []
+    truncated = False
+
+    def expired() -> bool:
+        return monotonic() - started_at >= deadline_seconds
+
+    def visit(directory: Path) -> bool:
+        nonlocal visited_count, included_count, ignored_count, truncated
+        if expired():
+            truncated = True
+            return False
+        try:
+            entries = sorted(scandir(directory), key=lambda entry: entry.name)
+        except OSError:
+            return True
+
+        for entry in entries:
+            if expired() or visited_count >= max_files:
+                truncated = True
+                return False
+            path = Path(entry.path)
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    if not visit(path):
+                        return False
+                    continue
+                if not entry.is_file(follow_symlinks=False):
+                    continue
+            except OSError:
+                continue
+
+            visited_count += 1
+            relative_path = path.relative_to(root).as_posix()
+            ignored = (
+                relative_path.split("/", 1)[0] == VERSION_STORE_DIRNAME
+                or not _matches_any(relative_path, include_globs)
+                or _matches_any(relative_path, exclude_globs)
+            )
+            if ignored:
+                ignored_count += 1
+                if len(ignored_paths) < sample_limit:
+                    ignored_paths.append(relative_path)
+            else:
+                included_count += 1
+                if len(included_paths) < sample_limit:
+                    included_paths.append(relative_path)
+        return True
+
+    visit(root)
+    return GlobPreview(
+        visited_count=visited_count,
+        included_count=included_count,
+        included_paths=included_paths,
+        ignored_count=ignored_count,
+        ignored_paths=ignored_paths,
+        truncated=truncated,
+    )
 
 
 def _matches_any(relative_path: str, globs: Sequence[str]) -> bool:

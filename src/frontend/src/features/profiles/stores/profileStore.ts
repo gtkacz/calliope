@@ -36,13 +36,20 @@ export const useProfileStore = defineStore('profiles', {
       }
     },
     async saveProfile(payload: ProfilePayload, profileId: string | null = null) {
-      const saved =
-        profileId === null
-          ? await profileApi.createProfile(payload)
-          : await profileApi.patchProfile(profileId, payload)
-      const index = this.profiles.findIndex((profile) => profile.id === saved.id)
-      if (index === -1) this.profiles.push(saved)
-      else this.profiles.splice(index, 1, saved)
+      this.errorMessage = null
+      try {
+        const saved =
+          profileId === null
+            ? await profileApi.createProfile(payload)
+            : await profileApi.patchProfile(profileId, payload)
+        const index = this.profiles.findIndex((profile) => profile.id === saved.id)
+        if (index === -1) this.profiles.push(saved)
+        else this.profiles.splice(index, 1, saved)
+        return saved
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Could not save profile.'
+        throw error
+      }
     },
     async deleteProfile(profileId: string) {
       await profileApi.deleteProfile(profileId)
@@ -50,6 +57,7 @@ export const useProfileStore = defineStore('profiles', {
     },
     async testProfile(profileId: string) {
       this.testResult = await profileApi.testProfile(profileId)
+      return this.testResult
     },
   },
 })

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -30,7 +31,7 @@ class ParsedDocument:
 def parse_markdown_file(path: Path, relative_path: str) -> ParsedDocument:
     post = frontmatter.loads(path.read_text(encoding="utf-8"))
     body = post.content
-    metadata = dict(post.metadata)
+    metadata = _normalize_frontmatter(dict(post.metadata))
     title = str(metadata.get("name") or _first_h1(body) or path.stem)
 
     return ParsedDocument(
@@ -39,6 +40,16 @@ def parse_markdown_file(path: Path, relative_path: str) -> ParsedDocument:
         frontmatter=metadata,
         sections=_split_sections(body, title),
     )
+
+
+def _normalize_frontmatter(value: Any) -> Any:
+    if isinstance(value, (date, datetime)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _normalize_frontmatter(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_frontmatter(item) for item in value]
+    return value
 
 
 def _first_h1(markdown: str) -> str | None:

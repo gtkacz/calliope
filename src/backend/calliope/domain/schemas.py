@@ -5,7 +5,14 @@ from typing import Any
 
 from calliope.domain.constants import VERSION_STORE_DIRNAME
 from calliope.domain.enums import CanonPolicy, EditMode, ProfileCapability, ProfileKind
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+
+def _normalized_required_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized:
+        raise ValueError("Name is required")
+    return normalized
 
 
 class WorkspaceCreate(BaseModel):
@@ -24,6 +31,8 @@ class WorkspaceCreate(BaseModel):
     versioning_enabled: bool | None = None
     guidelines: str | None = None
 
+    _normalize_name = field_validator("name")(_normalized_required_name)
+
 
 class WorkspacePatch(BaseModel):
     name: str | None = None
@@ -32,6 +41,11 @@ class WorkspacePatch(BaseModel):
     exclude_globs: list[str] | None = None
     versioning_enabled: bool | None = None
     guidelines: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        return _normalized_required_name(value) if value is not None else value
 
 
 class WorkspaceRead(WorkspaceCreate):
@@ -54,6 +68,24 @@ class DirectoryListing(BaseModel):
     # picker's default open location), or None when unset. Lets the UI tell a
     # genuinely-empty subfolder apart from an empty configured root.
     browse_root: str | None = None
+
+
+class GlobPreviewRequest(BaseModel):
+    root_path: str
+    include_globs: list[str] = Field(default_factory=list)
+    exclude_globs: list[str] = Field(default_factory=list)
+
+
+class GlobPreviewBucket(BaseModel):
+    count: int
+    paths: list[str]
+
+
+class GlobPreviewResponse(BaseModel):
+    visited_count: int
+    included: GlobPreviewBucket
+    ignored: GlobPreviewBucket
+    truncated: bool
 
 
 class FileContent(BaseModel):
@@ -98,6 +130,8 @@ class ProfileCreate(BaseModel):
     sampling_override: dict[str, Any] | None = None
     max_tokens: int | None = None
 
+    _normalize_name = field_validator("name")(_normalized_required_name)
+
 
 class ProfilePatch(BaseModel):
     name: str | None = None
@@ -109,6 +143,11 @@ class ProfilePatch(BaseModel):
     prefer_min_p: bool | None = None
     sampling_override: dict[str, Any] | None = None
     max_tokens: int | None = None
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str | None) -> str | None:
+        return _normalized_required_name(value) if value is not None else value
 
 
 class ProfileRead(ProfileCreate):

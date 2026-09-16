@@ -65,6 +65,39 @@ def test_reindex_workspace_persists_documents_and_chunks(db_session: Session) ->
     assert result.chunks_indexed >= 3
 
 
+def test_reindex_workspace_persists_yaml_dates_as_json_strings(
+    db_session: Session,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "timeline.md").write_text(
+        "---\n"
+        "created: 2026-09-15\n"
+        "events:\n"
+        "  - occurred_at: 2026-09-15T13:45:00Z\n"
+        "---\n"
+        "# Timeline\n\nAn important event.\n",
+        encoding="utf-8",
+    )
+    workspace = WorkspaceRepository(db_session).create(
+        WorkspaceCreate(name="dated-world", root_path=str(tmp_path))
+    )
+
+    result = Reindexer(
+        db_session,
+        embedding_client=FakeEmbeddingClient(),
+    ).reindex_workspace(workspace.id)
+
+    document = db_session.scalar(select(Document).where(Document.workspace_id == workspace.id))
+    chunk = db_session.scalar(select(Chunk).where(Chunk.document_id == document.id))
+    expected_frontmatter = {
+        "created": "2026-09-15",
+        "events": [{"occurred_at": "2026-09-15T13:45:00+00:00"}],
+    }
+    assert result.documents_indexed == 1
+    assert document.frontmatter_json == expected_frontmatter
+    assert chunk.metadata_json["frontmatter"] == expected_frontmatter
+
+
 def test_reindex_workspace_prunes_deleted_markdown_file(
     db_session: Session,
     tmp_path: Path,

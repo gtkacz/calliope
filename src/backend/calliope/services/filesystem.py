@@ -13,7 +13,7 @@ class FilesystemService:
         self._browse_root = browse_root
 
     def list_directory(self, raw_path: str | None, include_files: bool = False) -> DirectoryListing:
-        target = self._resolve(raw_path)
+        target = self.resolve_directory(raw_path)
         entries = self._read_entries(target, include_files=include_files)
         return DirectoryListing(
             path=str(target),
@@ -21,6 +21,12 @@ class FilesystemService:
             entries=entries,
             browse_root=self._resolved_browse_root(),
         )
+
+    def resolve_directory(self, raw_path: str | None) -> Path:
+        """Resolve an existing directory and enforce the configured browse boundary."""
+        target = self._resolve(raw_path)
+        self._confine(target)
+        return target
 
     def _resolved_browse_root(self) -> str | None:
         """Canonical browse-root path, matching the form of listed paths so the

@@ -1,6 +1,6 @@
 import { requestJson } from '@/shared/api/client'
 
-import type { DirectoryListing, ReindexResponse, Workspace } from './types'
+import type { DirectoryListing, GlobPreview, ReindexResponse, Workspace } from './types'
 
 export interface WorkspacePayload {
   name: string
@@ -43,6 +43,13 @@ export function reindexWorkspace(workspaceId: string): Promise<ReindexResponse> 
   return requestJson('/v1/reindex', {
     method: 'POST',
     body: JSON.stringify({ workspace_id: workspaceId }),
+  })
+}
+
+export function previewWorkspaceGlobs(payload: Pick<WorkspacePayload, 'root_path' | 'include_globs' | 'exclude_globs'>): Promise<GlobPreview> {
+  return requestJson('/v1/workspaces/glob-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
 }
 

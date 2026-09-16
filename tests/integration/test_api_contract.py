@@ -172,6 +172,7 @@ def test_openapi_contains_mvp_routes() -> None:
     assert response.status_code == 200
     paths = response.json()["paths"]
     assert "/v1/workspaces" in paths
+    assert "/v1/workspaces/glob-preview" in paths
     assert "/v1/reindex" in paths
     assert "/v1/search" in paths
     assert "/v1/chat" in paths
@@ -180,6 +181,40 @@ def test_openapi_contains_mvp_routes() -> None:
     assert "/v1/sources/{chunk_id}" in paths
     assert "/v1/sessions" in paths
     assert "/v1/sessions/{session_id}" in paths
+
+
+def test_workspace_glob_preview_is_confined_and_classifies_files(tmp_path: Path) -> None:
+    (tmp_path / "nested").mkdir()
+    (tmp_path / "note.md").write_text("note", encoding="utf-8")
+    (tmp_path / "nested" / "skip.md").write_text("skip", encoding="utf-8")
+    client = TestClient(
+        create_app(
+            Settings(
+                api_title="Calliope",
+                browse_root=str(tmp_path),
+                **SETTINGS_WITHOUT_ENV_FILE,
+            )
+        )
+    )
+
+    response = client.post(
+        "/v1/workspaces/glob-preview",
+        json={
+            "root_path": str(tmp_path),
+            "include_globs": ["**/*.md"],
+            "exclude_globs": ["nested/**"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["included"] == {"count": 1, "paths": ["note.md"]}
+    assert response.json()["ignored"] == {"count": 1, "paths": ["nested/skip.md"]}
+
+    outside = client.post(
+        "/v1/workspaces/glob-preview",
+        json={"root_path": str(tmp_path.parent), "include_globs": [], "exclude_globs": []},
+    )
+    assert outside.status_code == 403
 
 
 def test_openapi_contains_conversation_folder_routes() -> None:

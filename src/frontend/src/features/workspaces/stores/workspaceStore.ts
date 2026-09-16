@@ -45,14 +45,21 @@ export const useWorkspaceStore = defineStore('workspaces', {
       }
     },
     async saveWorkspace(payload: WorkspacePayload, workspaceId: string | null = null) {
-      const saved =
-        workspaceId === null
-          ? await workspaceApi.createWorkspace(payload)
-          : await workspaceApi.patchWorkspace(workspaceId, payload)
-      const index = this.workspaces.findIndex((workspace) => workspace.id === saved.id)
-      if (index === -1) this.workspaces.push(saved)
-      else this.workspaces.splice(index, 1, saved)
-      this.selectedWorkspaceId = saved.id
+      this.errorMessage = null
+      try {
+        const saved =
+          workspaceId === null
+            ? await workspaceApi.createWorkspace(payload)
+            : await workspaceApi.patchWorkspace(workspaceId, payload)
+        const index = this.workspaces.findIndex((workspace) => workspace.id === saved.id)
+        if (index === -1) this.workspaces.push(saved)
+        else this.workspaces.splice(index, 1, saved)
+        this.selectedWorkspaceId = saved.id
+        return saved
+      } catch (error) {
+        this.errorMessage = error instanceof Error ? error.message : 'Could not save workspace.'
+        throw error
+      }
     },
     async deleteWorkspace(workspaceId: string) {
       await workspaceApi.deleteWorkspace(workspaceId)

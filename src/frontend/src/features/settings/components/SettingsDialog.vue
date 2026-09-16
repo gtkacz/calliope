@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
+import { nextTick, onMounted, provide, ref, watch, type ComponentPublicInstance } from 'vue'
 
 import { useSettingsStore, type SettingsTab } from '../stores/settingsStore'
 import ProfilePanel from '@/features/profiles/components/ProfilePanel.vue'
 import WorkspacePanel from '@/features/workspaces/components/WorkspacePanel.vue'
 import ReindexPanel from '@/features/workspaces/components/ReindexPanel.vue'
 import AppearancePanel from './AppearancePanel.vue'
+import { draftGuardKey, type DraftGuard } from '../draftGuard'
 
 const settings = useSettingsStore()
 
@@ -24,6 +25,53 @@ const tabs: TabDef[] = [
 const tabRefs = ref<Record<string, HTMLButtonElement | null>>({})
 const indicatorLeft = ref(0)
 const indicatorWidth = ref(0)
+const activeDraftGuard = ref<DraftGuard | null>(null)
+const discardDialogOpen = ref(false)
+const pendingDiscardAction = ref<(() => void) | null>(null)
+
+function registerDraftGuard(guard: DraftGuard) {
+  activeDraftGuard.value = guard
+  return () => {
+    if (activeDraftGuard.value === guard) activeDraftGuard.value = null
+  }
+}
+
+function requestDiscard(action: () => void) {
+  if (!activeDraftGuard.value?.isDirty()) {
+    action()
+    return
+  }
+  pendingDiscardAction.value = action
+  discardDialogOpen.value = true
+}
+
+function confirmDiscard() {
+  const action = pendingDiscardAction.value
+  pendingDiscardAction.value = null
+  discardDialogOpen.value = false
+  activeDraftGuard.value?.discard()
+  action?.()
+}
+
+function cancelDiscard() {
+  pendingDiscardAction.value = null
+  discardDialogOpen.value = false
+}
+
+function changeTab(tab: SettingsTab) {
+  if (tab !== settings.tab) requestDiscard(() => { settings.tab = tab })
+}
+
+function requestClose() {
+  requestDiscard(() => settings.close())
+}
+
+function onDialogUpdate(next: boolean) {
+  if (next) settings.open = true
+  else requestClose()
+}
+
+provide(draftGuardKey, { register: registerDraftGuard, requestDiscard })
 
 function setTabRef(id: string, el: Element | ComponentPublicInstance | null) {
   tabRefs.value[id] = (el as HTMLButtonElement | null) ?? null
@@ -54,7 +102,7 @@ onMounted(syncIndicator)
     :model-value="settings.open"
     max-width="960"
     transition="scale-transition"
-    @update:model-value="settings.open = $event"
+    @update:model-value="onDialogUpdate"
   >
     <div class="settings-shell">
       <header class="settings-header">
@@ -66,7 +114,7 @@ onMounted(syncIndicator)
           type="button"
           class="settings-header__close"
           aria-label="Close settings"
-          @click="settings.close()"
+          @click="requestClose"
         >
           <v-icon icon="$mdi-close" size="18" />
         </button>
@@ -82,7 +130,7 @@ onMounted(syncIndicator)
           :class="{ 'is-active': settings.tab === tab.id }"
           role="tab"
           :aria-selected="settings.tab === tab.id"
-          @click="settings.tab = tab.id"
+          @click="changeTab(tab.id)"
         >
           {{ tab.label }}
         </button>
@@ -102,6 +150,17 @@ onMounted(syncIndicator)
         <AppearancePanel v-else-if="settings.tab === 'appearance'" />
       </div>
     </div>
+
+    <v-dialog v-model="discardDialogOpen" max-width="420">
+      <section class="discard-dialog" role="alertdialog" aria-labelledby="discard-title">
+        <h3 id="discard-title" class="calliope-serif">Discard unsaved changes?</h3>
+        <p>Your current draft will be lost.</p>
+        <div class="discard-dialog__actions">
+          <v-btn variant="text" @click="cancelDiscard">Keep editing</v-btn>
+          <v-btn color="primary" @click="confirmDiscard">Discard</v-btn>
+        </div>
+      </section>
+    </v-dialog>
   </v-dialog>
 </template>
 
@@ -222,6 +281,19 @@ onMounted(syncIndicator)
   overflow-y: auto;
   background: var(--calliope-ink-raised);
 }
+
+.discard-dialog {
+  padding: var(--calliope-space-lg);
+  background: var(--calliope-ink-raised);
+  border: 1px solid var(--calliope-border-strong);
+  border-radius: var(--calliope-radius-md);
+  color: var(--calliope-paper);
+}
+
+.discard-dialog h3,
+.discard-dialog p { margin: 0; }
+.discard-dialog p { margin-top: var(--calliope-space-sm); color: var(--calliope-paper-muted); }
+.discard-dialog__actions { display: flex; justify-content: flex-end; gap: var(--calliope-space-xs); margin-top: var(--calliope-space-lg); }
 
 /* Scoped input-well treatment.
  * The plain Vuetify variant reads as a thin underline; on a dense settings form

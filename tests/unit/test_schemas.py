@@ -1,10 +1,16 @@
 from calliope.domain.constants import VERSION_STORE_DIRNAME
 from calliope.domain.enums import CanonPolicy, ProfileCapability, ProfileKind
+import pytest
+from pydantic import ValidationError
+
 from calliope.domain.schemas import (
     ChatRequest,
     EditProposalRequest,
+    ProfileCreate,
+    ProfilePatch,
     SourceReference,
     WorkspaceCreate,
+    WorkspacePatch,
     WriteRequest,
 )
 
@@ -58,3 +64,21 @@ def test_generation_requests_apply_guidelines_by_default() -> None:
     assert ChatRequest(message="hi").apply_guidelines is True
     assert WriteRequest(message="hi").apply_guidelines is True
     assert EditProposalRequest(path="a.md", instruction="x").apply_guidelines is True
+
+
+def test_workspace_and_profile_names_are_trimmed_and_required() -> None:
+    assert WorkspaceCreate(name="  World  ", root_path="/tmp/world").name == "World"
+    assert WorkspacePatch(name="  Renamed  ").name == "Renamed"
+    assert ProfileCreate(
+        name="  Local  ", base_url="http://localhost", model="local", capabilities=[]
+    ).name == "Local"
+    assert ProfilePatch(name="  Updated  ").name == "Updated"
+
+    for factory in (
+        lambda: WorkspaceCreate(name="  ", root_path="/tmp/world"),
+        lambda: WorkspacePatch(name="  "),
+        lambda: ProfileCreate(name="  ", base_url="http://localhost", model="local", capabilities=[]),
+        lambda: ProfilePatch(name="  "),
+    ):
+        with pytest.raises(ValidationError, match="Name is required"):
+            factory()

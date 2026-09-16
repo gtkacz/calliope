@@ -2,32 +2,32 @@
 
 Calliope is the goddess of epic poetry.
 
-Calliope is a Linux-first local knowledge tool for tabletop roleplaying games. Keep campaign notes, setting material, rules references, NPCs, locations, session recaps, encounter ideas, and other game documents in ordinary Markdown, then search and work with them through a web UI, FastAPI service, and Typer CLI.
+Calliope is a Linux-first local knowledge tool for tabletop roleplaying games. Keep campaign notes, setting material, rules references, NPCs, locations, session recaps, encounter ideas, and other game documents in ordinary Markdown. You can search and work with those files through a web UI, FastAPI service, or Typer CLI.
 
-Calliope indexes Markdown into Postgres with pgvector and connects to models through OpenAI-compatible local profiles. Use it for campaign preparation, in-session lookup, continuity and canon tracking, brainstorming with an assistant, or grounded editing of your notes—while keeping the source files on your own machine.
+Calliope indexes Markdown into Postgres with pgvector and connects to models through OpenAI-compatible local profiles. Use it to prepare a campaign, look things up during a session, keep track of continuity, brainstorm with an assistant, or edit notes against your existing material. Your source files stay on your machine.
 
 ## Local Development
 
-Stand up the full stack (Postgres + backend + frontend, with migrations applied) with one command:
+Start the full stack, including Postgres, the backend, the frontend, and applied migrations, with one command.
 
 ```bash
 docker compose up --build
 ```
 
-Podman users on Fedora can substitute `podman compose up --build`. The frontend is served at <http://localhost:5173>, the backend OpenAPI at <http://127.0.0.1:8000/docs>, and the raw schema at <http://127.0.0.1:8000/openapi.json>.
+If you use Podman on Fedora, run `podman compose up --build` instead. The frontend is available at <http://localhost:5173>. The backend API documentation is at <http://127.0.0.1:8000/docs>, and the raw schema is at <http://127.0.0.1:8000/openapi.json>.
 
-Copy `.env.example` to `.env` to override any of the default host ports or the frontend's baked-in backend URL.
+Copy `.env.example` to `.env` if you need to change the default host ports or the backend URL used by the frontend.
 
-**Point Calliope at your files.** A container can only see directories that are bind-mounted into it. By default `CALLIOPE_BROWSE_ROOT` is an empty scratch directory, so the in-app folder picker, indexer, and file editor start out seeing *nothing*. Set it to the host directory you want to browse and edit — your whole home, or a single notes tree — in `.env`:
+Calliope needs access to the files you want to browse. A container can only see directories that are bind-mounted into it. By default, `CALLIOPE_BROWSE_ROOT` points to an empty scratch directory, so the folder picker, indexer, and file editor will not show any files. Set it in `.env` to the directory you want to browse and edit. This can be your whole home directory or one notes tree.
 
 ```bash
 CALLIOPE_BROWSE_ROOT=/home/youruser          # browse anything under your home
 # CALLIOPE_BROWSE_ROOT=/home/youruser/notes  # or restrict to a single tree
 ```
 
-or inline for a one-off run: `CALLIOPE_BROWSE_ROOT="$HOME" docker compose up`. The directory is bind-mounted read-write at the same absolute path inside the container, so pasted absolute paths resolve verbatim and in-app edits persist back to the host. If the picker reports that it can only see one empty folder, this variable is unset or points at an empty directory.
+You can also set it for one run with `CALLIOPE_BROWSE_ROOT="$HOME" docker compose up`. The directory is mounted read-write at the same absolute path inside the container. Absolute paths pasted into the app will resolve as expected, and edits made in the app will be saved on the host. If the picker shows only one empty folder, this variable is unset or points to an empty directory.
 
-Run CLI commands inside the running backend container:
+Once the stack is running, run CLI commands inside the backend container.
 
 ```bash
 docker compose exec backend calliope workspace add /path/inside/container --name my-campaign
@@ -38,32 +38,32 @@ docker compose exec backend calliope search "What happened to the missing carava
 docker compose exec backend calliope chat "Summarize what we know about the missing caravan and cite the relevant notes."
 ```
 
-Use `host.docker.internal` (mapped to `host-gateway` in `docker-compose.yml`) as the base URL when your OpenAI-compatible service (for example, Ollama) runs on the host. On Fedora, bind-mounting workspace markdown directories into the backend container requires the `:Z` suffix on the volume so SELinux relabels the directory for container access.
+Use `host.docker.internal` as the base URL when your OpenAI-compatible service, such as Ollama, is running on the host. `docker-compose.yml` maps this name to `host-gateway`. On Fedora, add the `:Z` suffix to bind-mounted workspace directories so SELinux relabels them for container access.
 
-If a local model is slow to load or generate, increase `CALLIOPE_LLM_REQUEST_TIMEOUT_SECONDS` in `.env` and restart the backend. The default is 120 seconds.
+If a local model takes a long time to load or generate a response, increase `CALLIOPE_LLM_REQUEST_TIMEOUT_SECONDS` in `.env` and restart the backend. The default is 120 seconds.
 
 ### Without containers
 
-If you prefer to run services directly on your host, start just the database:
+To run the services directly on your host, start the database first.
 
 ```bash
 docker compose up -d postgres
 ```
 
-Install the application with development dependencies and apply migrations:
+Install the application with its development dependencies, then apply the migrations.
 
 ```bash
 uv sync --extra dev
 uv run alembic upgrade head
 ```
 
-Run the API:
+Start the API.
 
 ```bash
 uv run calliope serve
 ```
 
-The host-side CLI workflow uses `127.0.0.1` as the model base URL:
+When you run the CLI on the host, use `127.0.0.1` as the model base URL.
 
 ```bash
 uv run calliope workspace add /path/to/campaign-notes --name my-campaign
